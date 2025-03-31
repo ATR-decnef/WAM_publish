@@ -13,14 +13,11 @@
 ```bash
 docker-compose up
 ```
-5. Enter the Docker container
-```bash
-docker exec -it <container_name> /bin/bash
-```
 
 # Run the analysis
-1. Enter the R environment
-2. Install the required packages
+1. Enter the R environment. You can Rstudio via the link (http://localhost:8585). Default User name and password are `rstudio` and `password`.
+
+2. Install the required packages (This may take a while)
 ```r
 install.packages(c("renv"))
 renv::restore()
