@@ -1,9 +1,9 @@
 # Installation
 1. Clone the repository
-If you run with local environment:
+## If you run with local environment:
 2. Install R
 
-If you run with Docker:
+## If you run with Docker:
 2. Install Docker and docker-compose
 3. Build the Docker image
 ```bash
