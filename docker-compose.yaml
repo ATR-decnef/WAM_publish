@@ -1,0 +1,21 @@
+version: '3'
+services:
+  rstudio:
+    build:
+      context: .
+    image: naoyuki_okamoto/wam_r_integrated
+    container_name: wam_r_integrated
+    environment: 
+      #任意のパスワードを設定する
+      - USER=${USERNAME}
+      - PASSWORD=password
+      - USERID=${USERID}
+      - GROUPID=${GROUPID}
+    ports:
+      - 8585:8787
+    volumes:
+      - /home/dec-data2/naoyuki_okamoto/WAM_integrated/:/home/WAM
+      - /home/decnef/naoyuki_okamoto/dockerfiles/:/home/dockerfiles:ro
+    tty: true
+    stdin_open: true
+    # user: ${USERID}:${GROUPID}

@@ -1,0 +1,133 @@
+*.png
+*.pptx
+*.pdf
+*.svg
+*.bak
+*.zip
+*.xlsx
+*.docx
+env/
+*.html
+*.aux
+*.log
+.ipynb_checkpoints/
+.vscode/
+__pycache__/
+results/
+*.rds
+*.rda
+.vs/
+*.csv
+.local/
+data/
+.config/
+test/
+.bashrc
+.bash_logout
+.profile
+settings.json
+results/
+model_based_analysis/R_result*/
+
+# History files
+*.Rhistory
+.Rapp.history
+
+# Session Data files
+*.RData
+.RDataTmp
+
+# User-specific files
+.Ruserdata
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# R Environment Variables
+.Renviron
+
+# pkgdown site
+docs/
+
+# translation temp files
+po/*~
+
+# RStudio Connect folder
+rsconnect/
+
+###
+# R folders and files
+###
+
+
+
+###
+# Unity folders and files
+###
+[Aa]ssets/AssetStoreTools*
+[Bb]uild/
+[Ll]ibrary/
+[Ll]ocal[Cc]ache/
+[Oo]bj/
+[Tt]emp/
+[Uu]nityGenerated/
+# file on crash reports
+sysinfo.txt
+# Unity3D generated meta files
+*.pidb.meta
+
+###
+# VS/MD solution and project files
+###
+[Ee]xportedObj/
+*.booproj
+*.csproj
+*.sln
+*.suo
+*.svd
+*.unityproj
+*.user
+*.userprefs
+*.pidb
+.DS_Store
+
+###
+# OS generated
+###
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+.Rproj.user
+change_gid.sh
+change_uid.sh
+restore_data_frame.R
+.config/rstudio/rstudio-prefs.json
