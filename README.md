@@ -1,7 +1,7 @@
 # Installation
 1. Clone the repository
 ## If you run with local environment:
-2. Install R
+2. Install R and Rstudio, and open this repository in Rstudio
 
 ## If you run with Docker:
 2. Install Docker and docker-compose
