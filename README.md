@@ -32,7 +32,8 @@ source("behaviour/analysis_scripts/execute_behaviour_analysis.R")
 3. Run the model based anaysis script 
 
 [!NOTE]
-This script will take a long time with CPU resource to run simulations
+This script will take a long time with CPU resource to run simulations.
+To avoid this, comment out the `source(here::here("model_based_analysis", "analysis", "MLE.R"))` and `source(here::here("model_based_analysis", "model", "parameter_recovery.R"))`. However, you need pre-computed data in `model_based_analysis/R_result`.
 
 ```r
 source("model_based_analysis/execute_model_analysis.R")
