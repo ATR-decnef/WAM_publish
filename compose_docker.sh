@@ -1,6 +1,6 @@
 export USERID="$(id -u)"
 export GROUPID="$(id -g)"
-export USERNAME="naoyuki_okamoto"
+export USERNAME="rstudio"
 
 echo $USERID
 echo $GROUPID
