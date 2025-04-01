@@ -124,7 +124,7 @@ p_model_switch_acc <-
   ) +
   geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
   coord_cartesian(xlim = c(-3, 8), ylim = c(0.3, 0.8)) +
-  xlab("trials after the switch") +
+  xlab("trials from the switch") +
   ylab("p(correct state inference)") +
   theme_fig_timeseries +
   theme(axis.title.y = element_text(size = 46 / fig_anova_scale))
@@ -168,15 +168,62 @@ p_model_switch_conf <-
   ) +
   geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
   coord_cartesian(xlim = c(-3, 8), ylim = c(-0.35, 0.25)) +
-  xlab("trials after the switch") +
-  ylab("z-scored conf / -(entropy)") +
+  xlab("trials from the switch") +
+  ylab("confidence\n(negative entropy)") +
   theme_fig_timeseries +
   theme(axis.title.y = element_text(size = 46 / fig_anova_scale))
 
 p_model_switch_conf %>%
   save_svg_figure("p_distance_model_switch_conf", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
-
+p_model_switch_conf_15 <-
+  res %>%
+  mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred)), behaviour = zConfidence) %>%
+  select(-pred) %>%
+  pivot_wider(names_from = input, values_from = entropy) %>%
+  pivot_longer(
+    # cols = c(behaviour, `binary model`),
+    cols = c(`binary model`),
+    names_to = "model",
+    values_to = "entropy"
+  ) %>%
+  group_by(PlayerID, model) %>%
+  mutate(entropy = scale(entropy)) %>%
+  group_by(PlayerID, model, switch, `num of trials`) %>%
+  summarise(entropy = mean(entropy)) %>%
+  dplyr::select(PlayerID, model, switch, `num of trials`, entropy) %>%
+  mutate(
+    switch = if_else(switch == "TrialsAfterSwitchToRandom",
+      "skill to random",
+      "random to skill"
+    )
+  ) %>%
+  ggplot(aes(x = `num of trials` + 1, y = entropy, linetype = switch, group = interaction(switch, model))) +
+  # geom_point() +
+  stat_summary(fun = mean, geom = "line", position = position_dodge(width = 0.2)) +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 1.0,
+    size = 0.8,
+    alpha = 0.8,
+    position = position_dodge(width = 0.2)
+  ) +
+  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
+  coord_cartesian(xlim = c(-15, 15), ylim = c(-0.35, 0.25)) +
+  xlab("trials from the switch") +
+  ylab("confidence\n(negative entropy)") +
+  theme_fig_timeseries +
+  tick_for_time_series_15 + 
+  # change legend position to top right inside the plot and make it transparent
+  theme(legend.position = c(0.2, 0.22), legend.background = element_rect(fill = "transparent")) +
+  labs(
+    linetype = ""  
+    ) +
+  theme(axis.title.y = element_text(size = 46 / fig_anova_scale))
+  
+p_model_switch_conf_15 %>%
+  save_svg_figure("p_distance_model_switch_conf_15", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
 # res %>%
 #   process_for_summary_anova() %>%

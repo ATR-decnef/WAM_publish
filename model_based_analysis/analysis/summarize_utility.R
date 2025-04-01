@@ -55,13 +55,30 @@ fig_1box_height <- 301
 fig_timeseries_width <- 383 + 92
 fig_timeseries_height <- 239
 
-tick_for_time_series <-
-  c(
+generate_tick_for_time_series = function(limits, label_step = 1){
+  list(
     scale_x_continuous(
-      limits = c(-3.4, 8.4), breaks = seq(-3, 8, 1), minor_breaks = seq(-3, 8, 1),
-      labels = c(seq(-3, 0, 1) - 1, seq(1, 8, 1))
+      limits = c(limits[1] - 0.4, limits[2] + 0.4), 
+      breaks = seq(limits[1] - 0.4, limits[2] + 0.4, label_step), 
+      minor_breaks = seq(limits[1], limits[2], label_step),
+      labels = c(seq(limits[1], 0, label_step) - 1, seq(label_step, limits[2], label_step))
     )
   )
+}
+
+tick_for_time_series <-
+  generate_tick_for_time_series(c(-3, 8), label_step = 1)
+  # c(
+  #   scale_x_continuous(
+  #     limits = c(-3.4, 8.4), 
+  #     breaks = seq(-3, 8, 1), 
+  #     minor_breaks = seq(-3, 8, 1),
+  #     labels = c(seq(-3, 0, 1) - 1, seq(1, 8, 1))
+  #   )
+  # )
+
+tick_for_time_series_15 <-
+  generate_tick_for_time_series(c(-15, 15), label_step = 5)
 
 theme_fig_base_core <-
   theme_pubr(
