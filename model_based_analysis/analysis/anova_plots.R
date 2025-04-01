@@ -1,6 +1,7 @@
 library(lme4)
 library(lmerTest)
 library(broom.mixed)
+library(coin)
 source(here::here("model_based_analysis", "model", "model_prediction.R"))
 
 # load fitted parameters and behaviour data, and make prediction ----
@@ -423,8 +424,6 @@ reg_model_behaviour_accuracy_score_truerule_group %>%
   )
 
 # spearman correlation for model and behaviour accuracy
-library(coin)
-
 corr_model_behaviour_accuracy_score_truerule_group <- 
   df_model_anova_acc %>% 
   inner_join(
