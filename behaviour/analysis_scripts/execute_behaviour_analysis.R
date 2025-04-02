@@ -308,11 +308,30 @@ df_proportion_state_choice = df_rule_hit %>%
     "proportion_state_choice_each_participant",
     analysis_group = "description"
   )
-  # rio::export(
-  #   here::here(fs::path("Figure", 
-  #                       "results", 
-  #                       "description",
-  #                       "proportion_state_choice_each_participant", ext = "csv")))
+
+df_proportion_state_choice_conditional <- df_rule_hit %>%
+  group_by(PlayerID, TrueRule) %>%
+  mutate(num_of_trials = n()) %>%
+  group_by(PlayerID, TrueRule, EstRule) %>%
+  summarize(proportion = n() / unique(num_of_trials), .groups = "drop") %>%
+  ungroup() %T>%
+  output_csv(
+    "proportion_state_choice_each_participant",
+    analysis_group = "description"
+  )
+
+df_proportion_state_choice_conditional %>%
+  group_by(TrueRule, EstRule) %>%
+  summarise(mean_proportion = mean(proportion), sd = sd(proportion)) %>%
+  output_csv(
+    "proportion_state_choice_conditional",
+    analysis_group = "description"
+  )
+# rio::export(
+#   here::here(fs::path("Figure",
+#                       "results",
+#                       "description",
+#                       "proportion_state_choice_each_participant", ext = "csv")))
 
 
 
@@ -339,6 +358,21 @@ df_proportion_state_choice %>%
     analysis_group = "description"
   )
 
+df_proportion_state_choice_conditional %>%
+  mutate(task_choice = interaction(TrueRule, EstRule)) %>%
+  select(-TrueRule, -EstRule) %>%
+  pivot_wider(names_from = task_choice, values_from = proportion) %>%
+  coin::wilcoxsign_test(
+    skill.skill ~ random.random,
+    data = .,
+    distribution = "exact",
+    zero.method = "Wilcoxon"
+  ) %>%
+  print() %T>%
+  sink_analysis(
+    "wilcox_test_proportion_state_choice_conditional",
+    analysis_group = "description"
+  )
 
 ## reaction_time------------------------------------------------
 p_hit_location_scatter = (df_rule_hit %>% 
