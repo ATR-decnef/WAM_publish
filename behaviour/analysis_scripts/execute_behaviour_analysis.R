@@ -871,9 +871,133 @@ p_switch_score =
 
 p_switch_score %>% save_svg_figure("p_switch_score", 
                                    analysis_group = "switch_score",
-                                   width = fig_timeseries_width, height = fig_timeseries_height, scaling = fig_anova_scale, unit = "mm")
+  width = fig_timeseries_width, height = fig_timeseries_height, scaling = fig_anova_scale, unit = "mm"
+)
 
+p_switch_score_with_individual <-
+  df_rule_hit %>%
+  process_for_switch(DisplayScore, DisplayScore) %>%
+  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(
+    aes(
+      group = interaction(switch, PlayerID),
+      color = switch
+    ),
+    fun = mean,
+    geom = "line",
+    alpha = 0.2,
+    size = 0.5,
+  ) +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 0.7,
+    size = 0.8,
+    alpha = 0.8,
+    position = position_dodge(width = 0.2)
+  ) +
+  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
+  coord_cartesian(xlim = c(-3.4, 8.4), ylim = c(0.4, 0.7)) +
+  xlab("trials after the switch") +
+  ylab("mean of score\n(0: negative, 1: positive)") +
+  theme_fig +
+  tick_for_time_series
 
+p_switch_score_with_individual %>% save_svg_figure("p_switch_score_with_individual",
+  analysis_group = "switch_score",
+  width = fig_timeseries_width, height = fig_timeseries_height, scaling = fig_anova_scale, unit = "mm"
+)
+
+p_switch_score_15 <-
+  df_rule_hit %>%
+  process_for_switch(DisplayScore, DisplayScore) %>%
+  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 0.7,
+    size = 0.8,
+    alpha = 0.8,
+    position = position_dodge(width = 0.2)
+  ) +
+  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
+  coord_cartesian(xlim = c(-15, 15), ylim = c(0.4, 0.7)) +
+  xlab("trials after the switch") +
+  ylab("mean of score\n(0: negative, 1: positive)") +
+  theme_fig +
+  tick_for_time_series_15
+
+p_switch_score_15 %>% save_svg_figure("p_switch_score_15",
+  analysis_group = "switch_score",
+  width = fig_timeseries_width, height = fig_timeseries_height * 1.2, scaling = fig_anova_scale, unit = "mm"
+)
+
+p_switch_score_15_player <-
+  df_rule_hit %>%
+  process_for_switch(DisplayScore, DisplayScore) %>%
+  filter(PlayerID == 12) %>%
+  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(
+    fun.data = mean_se,
+    geom = "errorbar",
+    width = 0.7,
+    size = 0.8,
+    alpha = 0.8,
+    position = position_dodge(width = 0.2)
+  ) +
+  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
+  coord_cartesian(xlim = c(-30, 30)) +
+  xlab("trials after the switch") +
+  ylab("mean of score\n(0: negative, 1: positive)") +
+  theme_fig
+p_switch_score_15_player %>% save_svg_figure("p_switch_score_15_player_6",
+  analysis_group = "switch_score",
+  width = fig_timeseries_width, height = fig_timeseries_height * 1.2, scaling = fig_anova_scale, unit = "mm"
+)
+
+## comparison between before and after switch ----
+df_rule_hit %>%
+  process_for_switch(DisplayScore, DisplayScore) %>%
+  filter(`num of trials` == 0 |
+    `num of trials` == -1) %>%
+  group_by(PlayerID, switch, DisplayScore) %>%
+  select(-TrueRule) %>%
+  pivot_wider(names_from = `num of trials`, values_from = DisplayScore) %>%
+  # filter(switch == "skill to random") %>%
+  filter(switch == "random to skill") %>%
+  coin::wilcoxsign_test(`0` ~ `-1`, distribution = "exact", data = ., zero.method = "Wilcoxon")
+
+df_rule_hit %>%
+  process_for_switch(DisplayScore, DisplayScore) %>%
+  filter(`num of trials` == 0 |
+    `num of trials` == -1) %>%
+  group_by(PlayerID, switch, DisplayScore) %>%
+  select(-TrueRule) %>%
+  pivot_wider(names_from = `num of trials`, values_from = DisplayScore) %>%
+  filter(switch == "skill to random") %>%
+  coin::wilcoxsign_test(`0` ~ `-1`, distribution = "exact", data = ., zero.method = "Wilcoxon")
+
+df_rule_hit %>%
+  pivot_longer(cols = c(TrialsAfterSwitchToSkill, TrialsAfterSwitchToRandom), names_to = "switch", values_to = "num of trials") %>%
+  dplyr::select(PlayerID, switch, TrueRule, `num of trials`, DisplayScore) %>%
+  mutate(
+    switch =
+      if_else(switch == "TrialsAfterSwitchToRandom",
+        "skill to random",
+        "random to skill"
+      )
+  ) %>%
+  filter(`num of trials` == -1 |
+    `num of trials` == 0) %>%
+  lme4::glmer(
+    DisplayScore ~ switch * `num of trials` + (1 | PlayerID),
+    family = binomial,
+    data = .
+  ) %>%
+  summary()
 ## -------------------------------------------------------------------
 p_switch_distance
 
