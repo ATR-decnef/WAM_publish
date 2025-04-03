@@ -105,6 +105,7 @@ df_rule_hit_meta_d_true_rule_performance <-
     unnest(cols = c(skill, random)) %>%
     inner_join(df_rule_hit_performance)
 
+# Suppelementary Figure 13A
 (df_rule_hit_meta_d_true_rule_performance %>%
     pivot_longer(names_to = "TrueRule", values_to = "output", cols = c(skill, random)) %>%
     ggplot(aes(x = TrueRule, y = output, group = TrueRule, color = TrueRule, alpha = TrueRule)) +
@@ -261,6 +262,7 @@ df_auc_true_rule <-
             as.numeric()
     )
 
+# Supplementary Figure 13B
 (df_rule_hit_meta_d_performance_score %>%
     ggplot(aes(
         x = DisplayScore,
@@ -344,7 +346,7 @@ df_rule_hit_meta_d_performance_score %>%
         unit = "mm"
     )
 
-
+# Supplementary figure 13C
 df_auc_true_rule_score <-
     df_rule_hit %>%
     mutate(DisplayScore = if_else(DisplayScore > 0,

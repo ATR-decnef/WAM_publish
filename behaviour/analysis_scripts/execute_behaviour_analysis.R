@@ -279,7 +279,7 @@ p_rle %>% save_svg_figure("p_rle",
 
 
 
-## general_accuracy---------------------------------------------
+## general_accuracy (Figure 1C) ---------------------------------------------
 general_acc_included <- df_rule_hit_origin %>%
   group_by(PlayerID) %>%
   summarise(accuracy = mean(Correct)) %>%
@@ -325,7 +325,7 @@ p_general_acc %>%
   save_svg_figure("general accuracy plot", scaling = fig_anova_scale, width = fig_1box_width, height = fig_1box_height, unit = "mm")
 
 
-## ----confusion_matrix (Table 1)---------------------------------------------------------
+## ----confusion_matrix (Suppelementary Table 1)---------------------------------------------------------
 df_rule_hit %>%
   mutate(`task state` = TrueRule, `choice` = EstRule) %>%
   xtabs(~ `choice` + `task state`, data = .) / (560 * 51)
@@ -341,6 +341,7 @@ df_proportion_state_choice <- df_rule_hit %>%
     analysis_group = "description"
   )
 
+## ----confusion_matrix (Table 1)---------------------------------------------------------
 df_proportion_state_choice_conditional <- df_rule_hit %>%
   group_by(PlayerID, TrueRule) %>%
   mutate(num_of_trials = n()) %>%
@@ -459,6 +460,57 @@ p_distance_true <- (df_rule_hit %>%
     width = fig_timeseries_width,
     height = fig_timeseries_height,
     scaling = fig_anova_scale, unit = "mm"
+  )
+
+## distance true rule (Suppelementary Figure 4A) ------------------------------------------------
+p_distance_true_box <-
+  (
+    df_rule_hit %>%
+      mutate(
+        Correct = if_else(Correct, "correct", "incorrect"),
+        DisplayScore = as.factor(numeric_score_to_strings(DisplayScore))
+      ) %>%
+      group_by(PlayerID, TrueRule) %>%
+      summarise(Distance = mean(Distance / true_threshold)) %>%
+      ungroup() %>%
+      ggplot(aes(x = TrueRule, y = Distance, group = TrueRule, color = TrueRule)) +
+      geom_boxplot(show.legend = FALSE, outlier.shape = NA) +
+      geom_sina_fitted(
+        alpha = 0.2,
+        show.legend = FALSE,
+        maxwidth = (box_width_2box / 0.75) * 0.5,
+      ) +
+      theme_fig_boxplot +
+      xlab(true_rule_name) +
+      ylab("distance from the centre of the moles")
+  ) %>%
+  save_svg_figure("distance true rule boxplot",
+    width = fig_2box_width,
+    height = fig_2box_height,
+    scaling = fig_anova_scale, unit = "mm"
+  ) # Supplementary Figure 4A
+
+# wilcox test for distance from the center of the moles
+df_rule_hit %>%
+  mutate(
+    Correct = if_else(Correct, "correct", "incorrect"),
+    DisplayScore = as.factor(numeric_score_to_strings(DisplayScore))
+  ) %>%
+  group_by(PlayerID, TrueRule) %>%
+  summarise(Distance = mean(Distance / true_threshold)) %>%
+  ungroup() %>%
+  select(PlayerID, TrueRule, Distance) %>%
+  pivot_wider(names_from = TrueRule, values_from = Distance) %>%
+  coin::wilcoxsign_test(
+    skill ~ random,
+    data = .,
+    distribution = "exact",
+    zero.method = "Wilcoxon"
+  ) %>%
+  print() %T>%
+  sink_analysis(
+    "wilcox_test_distance_true_rule",
+    analysis_group = "distance"
   )
 
 ## hit location (Supplementary Figure 3B) --------------------------
@@ -606,7 +658,7 @@ df_rule_hit %>%
     analysis_group = "ratio_score"
   )
 
-
+# Figure  1E
 p_choice_ratio <- df_rule_hit %>%
   mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
   group_by(PlayerID, DisplayScore, EstRule) %>%
@@ -640,7 +692,7 @@ p_choice_ratio %T>% save_svg_figure("ratio of choice for score",
 )
 
 
-## ----example------------------------------------------------------------------
+## example (Figure 1D) ------------------------------------------------------------------
 p_example <-
   df_rule_hit %>%
   filter(PlayerID == 12) %>%
@@ -783,7 +835,7 @@ df_conf_timeseries_p_coin %>%
   )
 
 
-## -------------------------------------------------------------------
+## time series analysis -------------------------------------------------------------------
 generate_tick_for_time_series <- function(limits, label_step = 1) {
   list(
     scale_x_continuous(
@@ -833,6 +885,7 @@ p_switch_acc <- df_rule_hit %>%
   theme_fig +
   tick_for_time_series
 
+# Figure 3A
 p_switch_acc %T>% save_svg_figure("p_switch_acc",
   analysis_group = "time_series",
   scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm"
@@ -863,8 +916,10 @@ p_switch_conf <- df_rule_hit %>%
   theme_fig +
   tick_for_time_series
 
+# Figure 5C
 p_switch_conf %T>% save_svg_figure("p_switch_conf", analysis_group = "time_series", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
+## Supplementary Figure 14A ----
 p_switch_conf_15 <- df_rule_hit %>%
   pivot_longer(cols = c(TrialsAfterSwitchToSkill, TrialsAfterSwitchToRandom), names_to = "switch", values_to = "num of trials") %>%
   group_by(PlayerID, switch, `num of trials`) %>%
@@ -1122,6 +1177,7 @@ df_rule_hit_for_test <-
   mutate(scale_conf = scale(EstRuleConfidence, center = FALSE, scale = TRUE)) %>%
   ungroup()
 
+# Figure 1F
 p_per_score_T <- df_rule_hit_for_test %>%
   group_by(PlayerID, DisplayScore) %>%
   summarise(accuracy = mean(Correct)) %>%
@@ -1203,10 +1259,11 @@ df_test_conf_score <-
 df_test_conf_score %>%
   output_posthoc_result("posthoc_wilcox_test_conf_score", analysis_group = "conf_score")
 
+# Figure 4B
 p_conf_score %>% save_svg_figure("p_conf_score", analysis_group = "conf_score", scaling = fig_anova_scale, width = fig_2box_width, height = fig_2box_height, unit = "mm")
 
 
-## -----------------------------------------------------------------------------
+## Figure 4 A -----------------------------------------------------------------------------
 p_conf_correct <-
   df_rule_hit_for_test %>%
   mutate(
@@ -1294,7 +1351,7 @@ df_rule_hit_for_test %>%
   )
 
 
-## -------------------------------------------------------------------
+## Figure 2 A-------------------------------------------------------------------
 p_accuracy_score_truerule <-
   df_rule_hit %>%
   plot_score_rule(TrueRule, Correct, DisplayScore, .alpha = DisplayScore, .fill = TrueRule) +
@@ -1375,7 +1432,7 @@ df_rule_hit_for_test %>%
 df_posthoc_acc_score_estrule <- df_rule_hit %>% summary_posthoc_test2(Correct, DisplayScore, EstRule)
 
 
-## -------------------------------------------------------------------
+## Figure 5 A -------------------------------------------------------------------
 p_conf_score_truerule <- df_rule_hit %>%
   plot_score_rule(TrueRule, zConfidence, DisplayScore, .alpha = DisplayScore, .fill = TrueRule) +
   theme_fig + ylab("confidence") + xlab("task state") + labs(alpha = "score") +
@@ -1454,7 +1511,7 @@ df_rule_hit_for_test %>%
   summary() # almost same result as anova-kun
 
 
-## -------------------------------------------------------------------
+## Figure 3D -------------------------------------------------------------------
 p_switch_prev_choice_score <-
   df_rule_hit %>%
   process_for_summary_anova() %>%
@@ -1474,7 +1531,7 @@ p_switch_prev_choice_score %>% save_svg_figure("p_switch_prev_choice_score", sca
 (p_switch_prev_choice_score + coord_cartesian(ylim = c(0, 1))) %>% save_svg_figure("p_switch_prev_choice_score_axis_scaled", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm", analysis_group = "switch_prev_choice_score")
 
 
-## -------------------------------------------------------------------
+## Figure 5E-------------------------------------------------------------------
 p_conf_switch <- df_rule_hit %>%
   process_for_summary_anova() %>%
   group_by(PlayerID, conf_binary, DisplayScore) %>%
@@ -2504,12 +2561,11 @@ df_score_conf_lme %>%
   )
 
 
-## -----------------------------------------------------------------------------
-
+## Supplementary Figure 13A, B, C-----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "meta_d_rule.R"))
 
 
-## -----------------------------------------------------------------------------
+## Supplementary Figure 13D -----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "confidence_and_performances.R"))
 
 

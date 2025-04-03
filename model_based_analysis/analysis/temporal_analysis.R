@@ -60,7 +60,7 @@ res %>%
   output_posthoc_result(
     "posthoc_distance_model_switch_acc",
     analysis_group = ""
-  ) 
+  )
 # do anova for the prediction ----
 res %>%
   pivot_wider(names_from = input, values_from = pred) %>%
@@ -80,19 +80,20 @@ res %>%
     )
   ) %>%
   ungroup() %>%
-  filter(`num of trials` > -1 & `num of trials` < 8) %>% 
-  select(-model) %>% 
+  filter(`num of trials` > -1 & `num of trials` < 8) %>%
+  select(-model) %>%
   anovakun("sAB",
-    long=TRUE,
-    gg=TRUE) %>% 
-    print()%>% 
+    long = TRUE,
+    gg = TRUE
+  ) %>%
+  print() %>%
   sink_analysis(
     "anova_distance_model_switch_acc",
     analysis_group = ""
   )
 
 
-  # plot the time-series of prediction (Figure 3 B) ----
+# plot the time-series of prediction (Figure 3 B) ----
 
 p_model_switch_acc <-
   res %>%
@@ -132,7 +133,7 @@ p_model_switch_acc <-
 p_model_switch_acc %>%
   save_svg_figure("p_distance_model_switch_acc", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
-# plot the timeseries of entropy (Figure 3 C) ----
+# plot the timeseries of entropy (Figure 5 D) ----
 p_model_switch_conf <-
   res %>%
   mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred)), behaviour = zConfidence) %>%
@@ -176,6 +177,7 @@ p_model_switch_conf <-
 p_model_switch_conf %>%
   save_svg_figure("p_distance_model_switch_conf", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
+## Supplementary Figure 14B
 p_model_switch_conf_15 <-
   res %>%
   mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred)), behaviour = zConfidence) %>%
@@ -214,14 +216,14 @@ p_model_switch_conf_15 <-
   xlab("trials from the switch") +
   ylab("confidence\n(negative entropy)") +
   theme_fig_timeseries +
-  tick_for_time_series_15 + 
+  tick_for_time_series_15 +
   # change legend position to top right inside the plot and make it transparent
   theme(legend.position = c(0.2, 0.22), legend.background = element_rect(fill = "transparent")) +
   labs(
-    linetype = ""  
-    ) +
+    linetype = ""
+  ) +
   theme(axis.title.y = element_text(size = 46 / fig_anova_scale))
-  
+
 p_model_switch_conf_15 %>%
   save_svg_figure("p_distance_model_switch_conf_15", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
@@ -242,7 +244,7 @@ p_model_switch_conf_15 %>%
 #   process_for_summary_anova() %>%
 #   plot_grouped_summary(prev_choice, pred, DisplayScore)
 
-# plot correlation between confidence and negative entropy
+# plot correlation between confidence and negative entropy (Supplementary Figure 10) ----
 (res %>%
   mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred))) %>%
   group_by(PlayerID, input) %>%
@@ -265,7 +267,7 @@ res %>%
   ungroup() %>%
   lmerTest::lmer(entropy ~ zConfidence + (zConfidence | PlayerID), data = .) %>%
   summary() %>%
-  print() %>% 
+  print() %>%
   sink_analysis(
     "lmer_entropy_conf",
     analysis_group = ""

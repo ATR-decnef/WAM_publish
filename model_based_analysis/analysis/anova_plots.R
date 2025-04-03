@@ -252,14 +252,14 @@ df_model_switch_anova %>%
   output_posthoc_result("posthoc_wilcox_test_model_conf_switch", analysis_group = "posthoc_wilcox_test")
 
 
-# plot the relationship between model and behaviour accuracy ----
+# plot the relationship between model and behaviour accuracy (Supplementary Figure 6) ----
 
 df_model_anova_acc <- df_pre_model_state %>%
   filter(input %in% input_list) %>%
   ungroup() %>%
   group_by(input) %>%
-  summarize_performance(TrueRule, Correct, score) %>% 
-  select(PlayerID, score, TrueRule, mean_Correct) 
+  summarize_performance(TrueRule, Correct, score) %>%
+  select(PlayerID, score, TrueRule, mean_Correct)
 
 df_behaviour_anova_acc <- df_rule_hit %>%
   mutate(score = case_when(
@@ -267,44 +267,48 @@ df_behaviour_anova_acc <- df_rule_hit %>%
     DisplayScore <= 0 ~ "negative",
     TRUE ~ "neutral"
   )) %>%
-  summarize_performance(TrueRule, Correct, score) %>% 
+  summarize_performance(TrueRule, Correct, score) %>%
   select(PlayerID, score, TrueRule, mean_Correct)
 
-p_model_behaviour_accuracy_score_truerule <- 
-  df_model_anova_acc %>% 
+p_model_behaviour_accuracy_score_truerule <-
+  df_model_anova_acc %>%
   inner_join(
     df_behaviour_anova_acc,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
-  ) %>% 
+  ) %>%
   ggplot(aes(x = mean_Correct_behaviour, y = mean_Correct_model, color = TrueRule)) +
-    geom_point(aes(
+  geom_point(
+    aes(
       shape = score,
     ),
     size = 2.5,
     alpha = 0.8,
     # key_glyph = draw_key_dotplot,
-    ) +
-    geom_line(aes(
+  ) +
+  geom_line(
+    aes(
       group = interaction(score, TrueRule),
       linetype = score
     ),
-      stat = "smooth",
-      se = FALSE,
-      method = lm_robust,
-      size = 1.2
-    ) +
-    xlab("p(correct behaviour inference)") +
-    ylab("p(correct model inference)") +
-    theme_fig_base +
-    theme(legend.position = "right") +
+    stat = "smooth",
+    se = FALSE,
+    method = lm_robust,
+    size = 1.2
+  ) +
+  xlab("p(correct behaviour inference)") +
+  ylab("p(correct model inference)") +
+  theme_fig_base +
+  theme(legend.position = "right") +
   labs(color = "task state", shape = "score", linetype = "") +
   scale_shape_manual(values = c(
-    `positive` = 16, 
-    `negative` = 21)) +
+    `positive` = 16,
+    `negative` = 21
+  )) +
   scale_linetype_manual(values = c(
-    `positive` = "solid", 
-    `negative` = "dashed")) +
+    `positive` = "solid",
+    `negative` = "dashed"
+  )) +
   guides(
     linetype = guide_legend(
       override.aes = list(
@@ -314,41 +318,45 @@ p_model_behaviour_accuracy_score_truerule <-
     )
   )
 
-p_model_behaviour_accuracy_score_truerule_facet <-
-  df_model_anova_acc %>% 
+p_model_behaviour_accuracy_score_truerule_facet <- # Supplementary Figure 6
+  df_model_anova_acc %>%
   inner_join(
     df_behaviour_anova_acc,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
-  ) %>% 
+  ) %>%
   ggplot(aes(x = mean_Correct_behaviour, y = mean_Correct_model, color = TrueRule)) +
-    geom_point(aes(
+  geom_point(
+    aes(
       shape = score,
     ),
     size = 2.5,
     alpha = 0.8,
     # key_glyph = draw_key_dotplot,
-    ) +
-    geom_line(aes(
+  ) +
+  geom_line(
+    aes(
       group = interaction(score, TrueRule),
       linetype = score
     ),
-      stat = "smooth",
-      se = FALSE,
-      method = lm_robust,
-      size = 1.2
-    ) +
-    xlab("p(correct behaviour inference)") +
-    ylab("p(correct model inference)") +
-    theme_fig_base +
-    theme(legend.position = "right") +
+    stat = "smooth",
+    se = FALSE,
+    method = lm_robust,
+    size = 1.2
+  ) +
+  xlab("p(correct behaviour inference)") +
+  ylab("p(correct model inference)") +
+  theme_fig_base +
+  theme(legend.position = "right") +
   labs(color = "task state", shape = "score", linetype = "") +
   scale_shape_manual(values = c(
-    `positive` = 16, 
-    `negative` = 21)) +
+    `positive` = 16,
+    `negative` = 21
+  )) +
   scale_linetype_manual(values = c(
-    `positive` = "solid", 
-    `negative` = "dashed")) +
+    `positive` = "solid",
+    `negative` = "dashed"
+  )) +
   guides(
     linetype = guide_legend(
       override.aes = list(
@@ -357,10 +365,10 @@ p_model_behaviour_accuracy_score_truerule_facet <-
       )
     )
   ) +
-  facet_wrap(. ~ interaction(score, TrueRule)) + 
+  facet_wrap(. ~ interaction(score, TrueRule)) +
   theme(panel.spacing.x = unit(2, "lines"))
 
-p_model_behaviour_accuracy_score_truerule %>% 
+p_model_behaviour_accuracy_score_truerule %>%
   save_svg_figure("p_model_behaviour_accuracy_score_truerule",
     scaling = fig_anova_scale, width = fig_anova_width * 1.5, height = fig_anova_height, unit = "mm"
   )
@@ -370,68 +378,74 @@ p_model_behaviour_accuracy_score_truerule_facet %>%
   )
 
 ## robust regression for entire data
-reg_model_behaviour_accuracy_score_truerule <- 
-  df_model_anova_acc %>% 
+reg_model_behaviour_accuracy_score_truerule <-
+  df_model_anova_acc %>%
   inner_join(
     df_behaviour_anova_acc,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
-  ) %>% 
-  lm_robust(mean_Correct_model ~ mean_Correct_behaviour * score * TrueRule, data = .) %>% 
+  ) %>%
+  lm_robust(mean_Correct_model ~ mean_Correct_behaviour * score * TrueRule, data = .) %>%
   tidy()
 
 ## single robust regression for entire data
-reg_model_behaviour_accuracy_score_truerule_single <- 
-  df_model_anova_acc %>% 
+reg_model_behaviour_accuracy_score_truerule_single <-
+  df_model_anova_acc %>%
   inner_join(
     df_behaviour_anova_acc,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
-  ) %>% 
-  lm_robust(mean_Correct_model ~ mean_Correct_behaviour, data = .) %>% 
-  tidy() 
+  ) %>%
+  lm_robust(mean_Correct_model ~ mean_Correct_behaviour, data = .) %>%
+  tidy()
 
 ## robust regression for each group
-reg_model_behaviour_accuracy_score_truerule_group <- 
-  df_model_anova_acc %>% 
+reg_model_behaviour_accuracy_score_truerule_group <-
+  df_model_anova_acc %>%
   inner_join(
     df_behaviour_anova_acc,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
-  ) %>% 
-  group_by(score, TrueRule) %>% 
+  ) %>%
+  group_by(score, TrueRule) %>%
   do({
-    lm_robust(mean_Correct_model ~ mean_Correct_behaviour, data = .) %>% 
+    lm_robust(mean_Correct_model ~ mean_Correct_behaviour, data = .) %>%
       tidy()
-  }) %>% 
+  }) %>%
   ungroup()
 
 # save regression results
-reg_model_behaviour_accuracy_score_truerule %>% 
+reg_model_behaviour_accuracy_score_truerule %>%
   rio::export(
-    here::here("results", 
-    "reg_model_behaviour_accuracy_score_truerule.csv")
+    here::here(
+      "results",
+      "reg_model_behaviour_accuracy_score_truerule.csv"
+    )
   )
 reg_model_behaviour_accuracy_score_truerule_single %>%
   rio::export(
-    here::here("results", 
-    "reg_model_behaviour_accuracy_score_truerule_single.csv")
+    here::here(
+      "results",
+      "reg_model_behaviour_accuracy_score_truerule_single.csv"
+    )
   )
 reg_model_behaviour_accuracy_score_truerule_group %>%
   rio::export(
-    here::here("results", 
-    "reg_model_behaviour_accuracy_score_truerule_group.csv")
+    here::here(
+      "results",
+      "reg_model_behaviour_accuracy_score_truerule_group.csv"
+    )
   )
 
 # spearman correlation for model and behaviour accuracy
-corr_model_behaviour_accuracy_score_truerule_group <- 
-  df_model_anova_acc %>% 
+corr_model_behaviour_accuracy_score_truerule_group <-
+  df_model_anova_acc %>%
   inner_join(
     df_behaviour_anova_acc,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
-  ) %>% 
-  group_by(score, TrueRule) %>% 
+  ) %>%
+  group_by(score, TrueRule) %>%
   do({
     test <- spearman_test(mean_Correct_model ~ mean_Correct_behaviour, data = .)
     data.frame(
@@ -442,17 +456,19 @@ corr_model_behaviour_accuracy_score_truerule_group <-
       score = unique(.$score),
       TrueRule = unique(.$TrueRule)
     )
-  }) %>% 
+  }) %>%
   ungroup()
 
 corr_model_behaviour_accuracy_score_truerule_group %>%
   rio::export(
-    here::here("results", 
-    "corr_model_behaviour_accuracy_score_truerule_group.csv")
+    here::here(
+      "results",
+      "corr_model_behaviour_accuracy_score_truerule_group.csv"
+    )
   )
 
 
-# plot the relationship between model and behaviour confidence ----
+# plot the relationship between model and behaviour confidence (Supplementary Figure 11) ----
 df_model_anova_conf <- df_pre_model_state %>%
   filter(input %in% input_list) %>%
   ungroup() %>%
@@ -476,7 +492,8 @@ p_model_behaviour_entropy_score_truerule <-
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
   ) %>%
-  ggplot(aes(x = mean_zConfidence, y = mean_z_entropy, 
+  ggplot(aes(
+    x = mean_zConfidence, y = mean_z_entropy,
     color = TrueRule
   )) +
   geom_point(
@@ -496,18 +513,20 @@ p_model_behaviour_entropy_score_truerule <-
     se = FALSE,
     method = lm_robust,
     size = 1.2
-  ) + 
+  ) +
   xlab("participants' confidence") +
   ylab("model confidence") +
   theme_fig +
   theme(legend.position = "right") +
   labs(color = "task state", shape = "score", linetype = "") +
   scale_shape_manual(values = c(
-    `positive` = 16, 
-    `negative` = 21)) +
+    `positive` = 16,
+    `negative` = 21
+  )) +
   scale_linetype_manual(values = c(
-    `positive` = "solid", 
-    `negative` = "dashed")) +
+    `positive` = "solid",
+    `negative` = "dashed"
+  )) +
   guides(
     linetype = guide_legend(
       override.aes = list(
@@ -517,14 +536,15 @@ p_model_behaviour_entropy_score_truerule <-
     )
   )
 
-p_model_behaviour_entropy_score_truerule_facet <-
+p_model_behaviour_entropy_score_truerule_facet <- # Supplementary Figure 11
   df_model_anova_conf %>%
   inner_join(
     df_behaviour_anova_conf,
     by = c("PlayerID", "score", "TrueRule"),
     suffix = c("_model", "_behaviour")
   ) %>%
-  ggplot(aes(x = mean_zConfidence, y = mean_z_entropy, 
+  ggplot(aes(
+    x = mean_zConfidence, y = mean_z_entropy,
     color = TrueRule
   )) +
   geom_point(
@@ -544,18 +564,20 @@ p_model_behaviour_entropy_score_truerule_facet <-
     se = FALSE,
     method = lm_robust,
     size = 1.2
-  ) + 
+  ) +
   xlab("participants' confidence") +
   ylab("model confidence") +
   theme_fig +
   theme(legend.position = "right") +
   labs(color = "task state", shape = "score", linetype = "") +
   scale_shape_manual(values = c(
-    `positive` = 16, 
-    `negative` = 21)) +
+    `positive` = 16,
+    `negative` = 21
+  )) +
   scale_linetype_manual(values = c(
-    `positive` = "solid", 
-    `negative` = "dashed")) +
+    `positive` = "solid",
+    `negative` = "dashed"
+  )) +
   guides(
     # linetype = "none",  # linetype の凡例を非表示にする
     linetype = guide_legend(
@@ -564,7 +586,8 @@ p_model_behaviour_entropy_score_truerule_facet <-
         linewidth = 0.5
       )
     ),
-  ) + facet_wrap(. ~ interaction(score, TrueRule))
+  ) +
+  facet_wrap(. ~ interaction(score, TrueRule))
 
 p_model_behaviour_entropy_score_truerule %>%
   save_svg_figure("p_model_behaviour_entropy_score_truerule",
@@ -614,19 +637,22 @@ reg_model_behaviour_entropy_score_truerule_group <-
 # save regression results
 reg_model_behaviour_entropy_score_truerule %>%
   rio::export(
-    here::here("results",
+    here::here(
+      "results",
       "reg_model_behaviour_entropy_score_truerule.csv"
     )
   )
 reg_model_behaviour_entropy_score_truerule_single %>%
   rio::export(
-    here::here("results",
+    here::here(
+      "results",
       "reg_model_behaviour_entropy_score_truerule_single.csv"
     )
   )
 reg_model_behaviour_entropy_score_truerule_group %>%
   rio::export(
-    here::here("results",
+    here::here(
+      "results",
       "reg_model_behaviour_entropy_score_truerule_group.csv"
     )
   )
@@ -655,8 +681,8 @@ corr_model_behaviour_entropy_score_truerule_group <-
 
 corr_model_behaviour_entropy_score_truerule_group %>%
   rio::export(
-    here::here("results",
+    here::here(
+      "results",
       "corr_model_behaviour_entropy_score_truerule_group.csv"
     )
   )
-

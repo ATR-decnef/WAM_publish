@@ -77,7 +77,7 @@ df_MLE_result <- foreach(file = file_lists, .combine = rbind) %do%
       mutate(name = data_name)
   } %>% mutate(PlayerID = as.factor(PlayerID))
 
-# calculate information criteria (Table 2) ====
+# calculate information criteria (Supplementary Table 2) ====
 df_MLE_result %>%
   sanitize_model_name() %>%
   pivot_wider(names_from = params, values_from = value) %>%
@@ -634,7 +634,7 @@ p_param_corr %>%
     scale = 0.5
   )
 
-# correlation between weights and threshold ratio (Supplementary Figure 12 -> 16)----
+# correlation between weights and threshold ratio (Supplementary Figure 12, 16)----
 df_MLE_result_binary %>%
   select(-log_likelihood, -name) %>%
   pivot_wider(names_from = params, values_from = value) %>%
