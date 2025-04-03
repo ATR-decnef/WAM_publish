@@ -215,6 +215,7 @@ df_model_switch_anova %>%
   filter(input == "Distance") %>%
   summarize_performance(score, is_switch, prev_output) %>%
   select(PlayerID, score, prev_output, mean_is_switch) %>%
+  replace_na(list(mean_is_switch = 0)) %>%
   anovakun("sAB", long = TRUE, gg = TRUE) %>%
   sink_analysis("anova_model_prev_choice_switch", analysis_group = "anova")
 
@@ -236,6 +237,7 @@ df_model_switch_anova %>%
   summarize_performance(score, is_switch, binary_conf) %>%
   select(PlayerID, score, binary_conf, mean_is_switch) %>%
   mutate(PlayerID = as.character(PlayerID)) %>%
+  replace_na(list(mean_is_switch = 0)) %>%
   anovakun("sAB", long = TRUE, gg = TRUE) %T>% print() %>%
   sink_analysis("anova_distance_model_conf_switch", analysis_group = "anova")
 
