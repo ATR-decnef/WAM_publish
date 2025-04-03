@@ -123,8 +123,8 @@ df_AIC_summary <-
   df_AIC %>%
   group_by(name) %>%
   summarise(mean = mean(AIC), sd = sd(AIC), min = min(AIC), max = max(AIC), median = median(AIC))
-df_AIC_summary %>% 
-export(here::here("results", "AIC_summary.csv"))
+df_AIC_summary %>%
+  export(here::here("results", "AIC_summary.csv"))
 
 # plot AIC (Supplementary Figure 5) ====
 p_AIC <- df_MLE_result %>%
@@ -566,8 +566,8 @@ df_wilcox_param_threshold <- df_MLE_result_binary %>%
   mutate(value = if_else(params == "threshold", value / true_threshold, value)) %>%
   filter(params == "threshold") %>%
   rstatix::wilcox_test(value ~ 1, mu = 1, exact = TRUE)
-df_wilcox_param_threshold %>% 
-rio::export(here::here("results", "wilcox_test_against_chance_thrshold.csv"))
+df_wilcox_param_threshold %>%
+  rio::export(here::here("results", "wilcox_test_against_chance_thrshold.csv"))
 p_val_wilcox_param_threshold <- df_wilcox_param_threshold %>% pull(p)
 
 p_threshold <- df_MLE_result_binary %>%
@@ -634,7 +634,7 @@ p_param_corr %>%
     scale = 0.5
   )
 
-# correlation between weights and threshold ratio (Supplementary Figure 12)----
+# correlation between weights and threshold ratio (Supplementary Figure 12 -> 16)----
 df_MLE_result_binary %>%
   select(-log_likelihood, -name) %>%
   pivot_wider(names_from = params, values_from = value) %>%
