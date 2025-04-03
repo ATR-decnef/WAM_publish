@@ -70,7 +70,7 @@ calc_bias <- function(b_G, b_B, score) {
 }
 
 predict_from_file <- function(df_rule_hit, estimation_filename, input_list) {
-  estimation_filename = here::here("model_based_analysis", estimation_filename)
+  estimation_filename <- here::here("model_based_analysis", estimation_filename)
   model <- estimation_filename %>%
     sub("estimation", "model", .) %>%
     import()
