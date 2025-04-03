@@ -18,8 +18,8 @@ results/
 *.rda
 .vs/
 *.csv
+!data/*.csv
 .local/
-data/
 .config/
 test/
 .bashrc
