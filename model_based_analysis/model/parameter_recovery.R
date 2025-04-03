@@ -17,8 +17,8 @@ model_obj_list <- c(
 )
 
 
-cluster <- makeCluster(min(20, getOption("mc.cores", detectCores())), outfile = "")
-registerDoParallel(cluster)
+# cluster <- makeCluster(min(10, getOption("mc.cores", detectCores())), outfile = "")
+# registerDoParallel(cluster)
 
 # for(col in c("state_error",
 #              "scaledTransformedError",
@@ -55,7 +55,7 @@ for (col in c("Distance")) {
     recovery_model(df_rule_hit, model_obj, model_name, col, "random", 100, param_mean, param_sd)
   }
 }
-stopCluster(cluster)
+# stopCluster(cluster)
 
 
 

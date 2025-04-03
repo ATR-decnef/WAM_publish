@@ -18,25 +18,6 @@ source(here::here("model_based_analysis", "model", "model_definition.R"))
 source(here::here("model_based_analysis", "model", "model_utility.R"))
 source(here::here("model_based_analysis", "preprocess", "MLE_preprocess.R"))
 
-# stopCluster(cluster)
-
-# model_obj_list = c(
-#   alpha_GB_model_obj = alpha_GB_model_obj,
-#   alpha_beta_gamma_model_obj = alpha_beta_gamma_model_obj,
-#   alpha_beta_gamma_sign_model_obj = alpha_beta_gamma_sign_model_obj,
-#   alpha_beta_gamma_sign_accum_model_obj = alpha_beta_gamma_accum_sign_model_obj,
-#   # alpha_beta_GB_gamma_model_obj = alpha_beta_GB_gamma_model_obj,
-#   # alpha_GB_beta_gamma_model_obj = alpha_GB_beta_gamma_model_obj,
-#   # alpha_GB_beta_GB_model = alpha_GB_beta_GB_model_obj,
-#   # alpha_GB_beta_gamma_model_obj = alpha_GB_beta_gamma_model_obj,
-#   # alpha_GB_beta_GB_gamma_accum_model_obj = alpha_GB_beta_GB_gamma_accum_model_obj,
-#   # alpha_GB_beta_GB_gamma_model_obj = alpha_GB_beta_GB_gamma_model_obj,
-#   alpha_GB_beta_GB_gamma_sign_accum_model_obj = alpha_GB_beta_GB_gamma_accum_sign_model_obj,
-#   alpha_GB_beta_GB_gamma_sign_model_obj = alpha_GB_beta_GB_gamma_sign_model_obj,
-#   alpha_GB_beta_GB_gamma_sign_accum_scaled_model_obj = alpha_GB_beta_GB_gamma_accum_sign_scaled_model_obj,
-#   alpha_GB_beta_GB_gamma_sign_scaled_model_obj = alpha_GB_beta_GB_gamma_sign_scaled_model_obj
-# )
-
 model_obj_list <- c(
   # alpha_GB_beta_GB_gamma_sign_model_obj = alpha_GB_beta_GB_gamma_sign_model_obj
   binary_sign_model_obj = binary_sign_model_obj,
@@ -50,7 +31,7 @@ model_obj_list <- c(
 
 
 
-# cluster = makeCluster(min(5, getOption("mc.cores", detectCores())), outfile = "")
+# cluster <- makeCluster(min(10, getOption("mc.cores", detectCores())), outfile = "")
 # registerDoParallel(cluster)
 # for(col in c("state_error", "state_error_2", "scaledTransformedError", "TransformedError", "anomaly_error")){
 # for(col in c("anomaly_error")){
