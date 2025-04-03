@@ -737,7 +737,8 @@ filename <-
   here::here(
     "model_based_analysis",
     "R_result",
-    "binary_sign_model_obj_Distance_random_estimation.rds")
+    "binary_sign_model_obj_Distance_random_estimation.rds"
+  )
 
 df_est_params <- import(filename) %>%
   as_tibble() %>%
@@ -979,7 +980,7 @@ df_hebaviour_confidence_summary <-
     q3 = quantile(confidence, 0.75)
   )
 
-# plot accuracy (Supplementary Figure 8) ----
+# plot accuracy (Supplementary Figure 8 -> 9) ----
 df_fig_switch_acc_sim <-
   df_sim_with_all_parameters %>%
   mutate( # plot the accuracy sequence
@@ -1015,7 +1016,7 @@ df_fig_switch_acc_sim %>% # layout the figures, columns are based on is_true_the
     unit = "mm"
   )
 
-# plot entropy (Supplementary Figure 11) ----
+# plot entropy (Supplementary Figure 11 -> 15) ----
 df_fig_switch_conf_sim <-
   df_sim_with_all_parameters %>%
   mutate( # plot the entropy sequence
@@ -1076,7 +1077,7 @@ df_fig_Z_bias_seq_sim <-
       ))
   )
 
-# plot accuracy anova (Supplementary Figure 6) ----
+# plot accuracy anova (Supplementary Figure 6 -> 7) ----
 df_fig_anova_score_true_rule_sim <- df_sim_with_all_parameters %>%
   mutate( # plot the accuracy anova
     p_model_anova_acc_score_truerule = map(df_sim, ~ (
@@ -1162,7 +1163,7 @@ df_sim_with_all_parameters %>%
     })
   )
 
-# plot entropy anova (Supplementary Figure 9) ----
+# plot entropy anova (Supplementary Figure 9 -> 12) ----
 df_fig_anova_entropy_score_true_rule_sim <-
   df_sim_with_all_parameters %>%
   mutate( # plot the entropy anova

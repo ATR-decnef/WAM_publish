@@ -407,7 +407,7 @@ df_proportion_state_choice_conditional %>%
     analysis_group = "description"
   )
 
-## reaction_time------------------------------------------------
+## reaction_time (Suppelementary Figure 3A) ------------------------------------------------
 p_hit_location_scatter <- (df_rule_hit %>%
   mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
   ggplot(aes(x = LocX, LocY, color = TrueRule)) +
@@ -461,6 +461,7 @@ p_distance_true <- (df_rule_hit %>%
     scaling = fig_anova_scale, unit = "mm"
   )
 
+## hit location (Supplementary Figure 3B) --------------------------
 
 p_hit_location_scatter_score <- (df_rule_hit %>% mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>% ggplot(aes(x = LocX, LocY, color = DisplayScore)) +
   geom_point() +
@@ -490,7 +491,7 @@ p_distance_score <- (df_rule_hit %>%
   ) # Supplementary Figure 3B
 
 
-## score_ratio--------------------------------------------------
+## score_ratio (Supplementary Figure 2) --------------------------------------------------
 p_score_ratio_truerule <- (df_rule_hit %>%
   group_by(PlayerID, TrueRule, DisplayScore) %>%
   summarise(count = n()) %>%
@@ -531,7 +532,7 @@ p_score_ratio_truerule <- (df_rule_hit %>%
   save_svg_figure(paste0("ratio of scores for ", true_rule_name),
     analysis_group = "ratio_score",
     scaling = fig_anova_scale, width = fig_2box_width, height = fig_2box_height, unit = "mm"
-  ) # Supplementary Figure 2
+  )
 
 df_rule_hit %>%
   group_by(PlayerID, TrueRule, DisplayScore) %>%
@@ -929,7 +930,7 @@ df_rule_hit %>%
   sink_analysis(filename = "anova_switch_conf.txt", analysis_group = "time_series")
 
 
-## -------------------------------------------------------------------
+## Supplementary Figure 4B-------------------------------------------------------------------
 p_switch_distance <-
   df_rule_hit %>%
   process_for_switch(Distance / threshold, Distance) %>%
@@ -1876,7 +1877,7 @@ df_distance %>%
   )
 
 
-## -------------------------------------------------------------------
+## Supplementary Figure 4C -------------------------------------------------------------------
 p_distance_diff_next <-
   df_distance %>%
   summarize_performance(EstRule, normalized_distance_from_next, DisplayScore) %>%
