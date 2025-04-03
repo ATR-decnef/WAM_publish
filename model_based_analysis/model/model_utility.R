@@ -218,9 +218,3 @@ clip_probs <- function(value, delta = 10^-300) {
 
   return(value)
 }
-
-executeParallel <- function(func, cl = detectCores()) {
-  registerDoParallel(cl)
-  on.exit(stopCluster(cl))
-  func
-}
