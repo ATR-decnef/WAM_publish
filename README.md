@@ -40,6 +40,6 @@ source("model_based_analysis/execute_model_analysis.R")
 ```
 
 # data
-- `df_rule_hit_untilMar_switch.csv`: The data of the rule prediction main task used in the paper.
-- `df_score_hit_untilMar.csv`: The data of the score prediction task used in the paper.
+- `df_rule_hit_switch.csv`: The data of the rule prediction main task used in the paper.
+- `df_score_hit.csv`: The data of the score prediction task used in the paper.
 - `players_rewards.csv`: The data of the participants' demographics and rewards.

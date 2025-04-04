@@ -65,13 +65,13 @@ add_true_threshold <- function(df) {
 }
 
 
-df_score_hit <- read_csv(here::here("data/df_score_hit_untilMar.csv"))
+df_score_hit <- read_csv(here::here("data/df_score_hit.csv"))
 
 df_median <- df_score_hit %>%
   group_by(PlayerID) %>%
   summarise(threshold = median(Distance))
 
-df_rule_hit <- read_csv(here::here("data/df_rule_hit_untilMar_switch.csv")) %>%
+df_rule_hit <- read_csv(here::here("data/df_rule_hit_switch.csv")) %>%
   mutate(PlayerID = as.factor(PlayerID)) %>%
   mutate(
     EstRule = str_replace_all(EstRule, pattern = c("luck" = "random")),

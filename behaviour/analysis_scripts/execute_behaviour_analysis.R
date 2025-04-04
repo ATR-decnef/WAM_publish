@@ -87,7 +87,7 @@ est_rule_name <- "choice"
 
 
 ## ----load_data----------------------------------------------------------------
-df_rule_hit_origin <- read_csv(here::here("data/df_rule_hit_untilMar_switch.csv")) %>%
+df_rule_hit_origin <- read_csv(here::here("data/df_rule_hit_switch.csv")) %>%
   mutate(PlayerID = as.factor(PlayerID)) %>%
   mutate(
     EstRule = str_replace_all(EstRule, pattern = c("luck" = "random")),
@@ -97,7 +97,7 @@ df_rule_hit_origin <- read_csv(here::here("data/df_rule_hit_untilMar_switch.csv"
     TrueScore = if_else(TrueScore < 0, 0, TrueScore),
     DisplayScore = if_else(DisplayScore < 0, 0, DisplayScore)
   )
-df_score_hit <- read_csv(here::here("data/df_score_hit_untilMar.csv")) %>% mutate(PlayerID = as.factor(PlayerID))
+df_score_hit <- read_csv(here::here("data/df_score_hit.csv")) %>% mutate(PlayerID = as.factor(PlayerID))
 df_median <- df_score_hit %>% group_by(PlayerID)
 
 
@@ -105,6 +105,7 @@ df_median <- df_score_hit %>% group_by(PlayerID)
 source(here::here("behaviour", "analysis_scripts", "CheckCriteria.R"))
 source(here::here("behaviour", "analysis_scripts", "preprocess.R"))
 source(here::here("behaviour", "analysis_scripts", "summarize_utility.R"))
+# source(here::here("model_based_analysis", "analysis", "summarize_utility.R"))
 source(here::here("behaviour", "analysis_scripts", "anova_kun.R"))
 
 p_criteria <- CheckCriteria(df_rule_hit_origin)
@@ -128,7 +129,9 @@ df_rule_hit <- excludeDfRuleHit(df_rule_hit_origin) %>% # preprocessDfRuleHit() 
   ) %>%
   add_true_threshold() %>%
   mutate(threshold = true_threshold) %>%
-  mutate(normalizedDistance = Distance / true_threshold)
+  mutate(normalizedDistance = Distance / true_threshold) %>%
+  mutate(TrueRule = as.factor(TrueRule))
+
 playerid_list <- df_rule_hit %>%
   pull(PlayerID) %>%
   as.factor() %>%
@@ -200,6 +203,7 @@ rio::import(here::here("data/players_rewards.csv")) %>%
 # histogram of the number of trials between switches
 df_rle <-
   df_rule_hit %>%
+  mutate(TrueRule = as.character(TrueRule)) %>%
   group_by(PlayerID) %>%
   nest() %>%
   mutate(
@@ -590,6 +594,7 @@ df_rule_hit %>%
   group_by(PlayerID, TrueRule, DisplayScore) %>%
   summarise(count = n()) %>%
   mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
+  mutate(TrueRule = as.factor(TrueRule)) %>%
   pivot_wider(names_from = DisplayScore, values_from = count) %>%
   ungroup() %>%
   mutate(ratio = positive / (positive + negative)) %>%
@@ -605,58 +610,35 @@ df_rule_hit %>%
   pivot_wider(names_from = DisplayScore, values_from = count) %>%
   mutate(ratio = positive / (positive + negative)) %>%
   select(PlayerID, TrueRule, ratio) %>%
-  posthoc_wilcox_against_chance(ratio ~ TrueRule, alternative = "two.sided") %>%
-  output_posthoc_result(
-    "posthoc_wilcox_test_ratio_score_true_rule_against_chance",
-    analysis_group = "ratio_score"
+  mutate(chance_level = 0.5) %>%
+  group_by(TrueRule) %>%
+  nest() %>%
+  mutate(
+    wilcoxsign = map(.x = data, .f = ~ .x %>%
+      select(PlayerID, ratio, chance_level) %>%
+      coin::wilcoxsign_test(as.formula(paste0("ratio", " ~ chance_level")),
+        data = .,
+        distribution = "exact",
+        zero.method = "Wilcoxon",
+        alternative = "two.sided"
+      )),
+    Z = sapply(wilcoxsign, coin::statistic),
+    p_coin = sapply(wilcoxsign, coin::pvalue)
+  ) %>%
+  select(-data, -wilcoxsign) %>%
+  rio::export(
+    here::here(fs::path(
+      "results",
+      "ratio_score",
+      "posthoc_wilcox_test_ratio_score_true_rule_against_chance",
+      ext = "csv"
+    ))
   )
-
-
-p_score_ratio_estimation <- (df_rule_hit %>%
-  group_by(PlayerID, EstRule, DisplayScore) %>%
-  summarise(count = n()) %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  pivot_wider(names_from = DisplayScore, values_from = count) %>%
-  ggplot(aes(x = EstRule, y = positive / (positive + negative), group = EstRule, color = EstRule)) +
-  geom_boxplot(show.legend = FALSE, width = box_width_2box) +
-  geom_sina_fitted(alpha = 0.2, show.legend = FALSE, maxwidth = (box_width_2box / 0.75) * 0.5) +
-  geom_signif(comparisons = list(c("random", "skill")), test = "wilcox.test", map_signif_level = TRUE, test.args = list(paired = TRUE, exact = TRUE), color = "black", textsize = 6, margin_top = 0.15, alpha = 1) +
-  scale_y_continuous(breaks = seq(0, 1, 0.25), minor_breaks = seq(0, 1, 0.25), expand = expansion(mult = c(0.05, 0.2))) +
-  coord_cartesian(ylim = c(0.17, 1)) +
-  theme_fig_boxplot +
-  guides(color = guide_legend(color = FALSE)) +
-  xlab(est_rule_name) +
-  ylab("ratio of positive scores")) %T>%
-  save_svg_figure(paste0("ratio of scores for ", est_rule_name),
-    analysis_group = "ratio_score",
-    scaling = fig_anova_scale, width =
-      fig_2box_width, height =
-      fig_2box_height, unit = "mm"
-  )
-
-df_rule_hit %>%
-  group_by(PlayerID, EstRule, DisplayScore) %>%
-  summarise(count = n()) %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  pivot_wider(names_from = DisplayScore, values_from = count) %>%
-  ungroup() %>%
-  mutate(ratio = positive / (positive + negative)) %>%
-  select(PlayerID, EstRule, ratio) %>%
-  posthoc_wilcox_test(ratio ~ EstRule) %>%
-  output_posthoc_result("posthoc_wilcox_test_ratio_score_est_rule", analysis_group = "ratio_score")
-
-df_rule_hit %>%
-  group_by(PlayerID, EstRule, DisplayScore) %>%
-  summarise(count = n()) %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  pivot_wider(names_from = DisplayScore, values_from = count) %>%
-  mutate(ratio = positive / (positive + negative)) %>%
-  select(PlayerID, EstRule, ratio) %>%
-  posthoc_wilcox_against_chance(ratio ~ EstRule, alternative = "two.sided") %>%
-  output_posthoc_result(
-    "posthoc_wilcox_test_ratio_score_est_rule_against_chance",
-    analysis_group = "ratio_score"
-  )
+# posthoc_wilcox_against_chance(ratio ~ TrueRule, alternative = "two.sided") %>%
+# output_posthoc_result(
+#   "posthoc_wilcox_test_ratio_score_true_rule_against_chance",
+#   analysis_group = "ratio_score"
+# )
 
 # Figure  1E
 p_choice_ratio <- df_rule_hit %>%
@@ -740,8 +722,9 @@ df_acc_timeseries_p <-
   process_for_switch(Correct, accuracy) %>%
   ungroup() %>%
   filter(`num of trials` > -1 & `num of trials` < 8) %>%
+  mutate(`num of trials` = as.factor(`num of trials`)) %>%
   group_by(`num of trials`) %>%
-  wilcox_test(accuracy ~ switch, paired = TRUE, data = ., exact = TRUE) %>%
+  rstatix::wilcox_test(accuracy ~ switch, paired = TRUE, data = ., exact = TRUE) %>%
   adjust_pvalue(method = "fdr") %>%
   mutate(star = if_else(p.adj < 0.001, "***",
     if_else(p.adj < 0.01, "**",
@@ -791,7 +774,7 @@ df_conf_timeseries_p <-
   ungroup() %>%
   filter(`num of trials` > -1 & `num of trials` < 8) %>%
   group_by(`num of trials`) %>%
-  wilcox_test(mean_conf ~ switch, paired = TRUE, data = .) %>%
+  rstatix::wilcox_test(mean_conf ~ switch, paired = TRUE, data = .) %>%
   adjust_pvalue(method = "fdr") %>%
   mutate(star = if_else(p.adj < 0.001, "***",
     if_else(p.adj < 0.01, "**",
@@ -1011,161 +994,6 @@ p_switch_distance %>% save_svg_figure("p_switch_distance",
   width = fig_timeseries_width, height = fig_timeseries_height, scaling = fig_anova_scale, unit = "mm"
 )
 
-
-## score difference around the switch ------
-p_switch_score <-
-  df_rule_hit %>%
-  process_for_switch(DisplayScore, DisplayScore) %>%
-  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "errorbar",
-    width = 0.7,
-    size = 0.8,
-    alpha = 0.8,
-    position = position_dodge(width = 0.2)
-  ) +
-  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
-  coord_cartesian(xlim = c(-3.4, 8.4), ylim = c(0.4, 0.7)) +
-  xlab("trials after the switch") +
-  ylab("mean of score\n(0: negative, 1: positive)") +
-  theme_fig +
-  tick_for_time_series
-
-p_switch_score %>% save_svg_figure("p_switch_score",
-  analysis_group = "switch_score",
-  width = fig_timeseries_width, height = fig_timeseries_height, scaling = fig_anova_scale, unit = "mm"
-)
-
-p_switch_score_with_individual <-
-  df_rule_hit %>%
-  process_for_switch(DisplayScore, DisplayScore) %>%
-  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    aes(
-      group = interaction(switch, PlayerID),
-      color = switch
-    ),
-    fun = mean,
-    geom = "line",
-    alpha = 0.2,
-    size = 0.5,
-  ) +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "errorbar",
-    width = 0.7,
-    size = 0.8,
-    alpha = 0.8,
-    position = position_dodge(width = 0.2)
-  ) +
-  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
-  coord_cartesian(xlim = c(-3.4, 8.4), ylim = c(0.4, 0.7)) +
-  xlab("trials after the switch") +
-  ylab("mean of score\n(0: negative, 1: positive)") +
-  theme_fig +
-  tick_for_time_series
-
-p_switch_score_with_individual %>% save_svg_figure("p_switch_score_with_individual",
-  analysis_group = "switch_score",
-  width = fig_timeseries_width, height = fig_timeseries_height, scaling = fig_anova_scale, unit = "mm"
-)
-
-p_switch_score_15 <-
-  df_rule_hit %>%
-  process_for_switch(DisplayScore, DisplayScore) %>%
-  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "errorbar",
-    width = 0.7,
-    size = 0.8,
-    alpha = 0.8,
-    position = position_dodge(width = 0.2)
-  ) +
-  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
-  coord_cartesian(xlim = c(-15, 15), ylim = c(0.4, 0.7)) +
-  xlab("trials after the switch") +
-  ylab("mean of score\n(0: negative, 1: positive)") +
-  theme_fig +
-  tick_for_time_series_15
-
-p_switch_score_15 %>% save_svg_figure("p_switch_score_15",
-  analysis_group = "switch_score",
-  width = fig_timeseries_width, height = fig_timeseries_height * 1.2, scaling = fig_anova_scale, unit = "mm"
-)
-
-p_switch_score_15_player <-
-  df_rule_hit %>%
-  process_for_switch(DisplayScore, DisplayScore) %>%
-  filter(PlayerID == 12) %>%
-  ggplot(aes(x = `num of trials` + 1, y = DisplayScore, group = switch, color = switch)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    fun.data = mean_se,
-    geom = "errorbar",
-    width = 0.7,
-    size = 0.8,
-    alpha = 0.8,
-    position = position_dodge(width = 0.2)
-  ) +
-  geom_vline(xintercept = 1 - 0.5, linetype = "dashed", color = "gray") +
-  coord_cartesian(xlim = c(-30, 30)) +
-  xlab("trials after the switch") +
-  ylab("mean of score\n(0: negative, 1: positive)") +
-  theme_fig
-p_switch_score_15_player %>% save_svg_figure("p_switch_score_15_player_6",
-  analysis_group = "switch_score",
-  width = fig_timeseries_width, height = fig_timeseries_height * 1.2, scaling = fig_anova_scale, unit = "mm"
-)
-
-## comparison between before and after switch ----
-df_rule_hit %>%
-  process_for_switch(DisplayScore, DisplayScore) %>%
-  filter(`num of trials` == 0 |
-    `num of trials` == -1) %>%
-  group_by(PlayerID, switch, DisplayScore) %>%
-  select(-TrueRule) %>%
-  pivot_wider(names_from = `num of trials`, values_from = DisplayScore) %>%
-  # filter(switch == "skill to random") %>%
-  filter(switch == "random to skill") %>%
-  coin::wilcoxsign_test(`0` ~ `-1`, distribution = "exact", data = ., zero.method = "Wilcoxon")
-
-df_rule_hit %>%
-  process_for_switch(DisplayScore, DisplayScore) %>%
-  filter(`num of trials` == 0 |
-    `num of trials` == -1) %>%
-  group_by(PlayerID, switch, DisplayScore) %>%
-  select(-TrueRule) %>%
-  pivot_wider(names_from = `num of trials`, values_from = DisplayScore) %>%
-  filter(switch == "skill to random") %>%
-  coin::wilcoxsign_test(`0` ~ `-1`, distribution = "exact", data = ., zero.method = "Wilcoxon")
-
-df_rule_hit %>%
-  pivot_longer(cols = c(TrialsAfterSwitchToSkill, TrialsAfterSwitchToRandom), names_to = "switch", values_to = "num of trials") %>%
-  dplyr::select(PlayerID, switch, TrueRule, `num of trials`, DisplayScore) %>%
-  mutate(
-    switch =
-      if_else(switch == "TrialsAfterSwitchToRandom",
-        "skill to random",
-        "random to skill"
-      )
-  ) %>%
-  filter(`num of trials` == -1 |
-    `num of trials` == 0) %>%
-  lme4::glmer(
-    DisplayScore ~ switch * `num of trials` + (1 | PlayerID),
-    family = binomial,
-    data = .
-  ) %>%
-  summary()
-## -------------------------------------------------------------------
-p_switch_distance
-
-
 ## accuracy_score-----------------------------------------------
 df_rule_hit_for_test <-
   df_rule_hit %>%
@@ -1204,7 +1032,7 @@ df_per_score_test_against_chance <- df_rule_hit_for_test %>%
   summarise(accuracy = mean(Correct)) %>%
   mutate(chance_level = 0.5) %>%
   group_by(DisplayScore) %>% # DisplayScoreでグループ化
-  wilcox_test(accuracy ~ 1, mu = 0.5, alternative = "greater", exact = TRUE) %>% # Wilcoxon符号順位検定
+  rstatix::wilcox_test(accuracy ~ 1, mu = 0.5, alternative = "greater", exact = TRUE) %>% # Wilcoxon符号順位検定
   adjust_pvalue(method = "fdr") %>%
   add_significance(p.col = "p.adj")
 
@@ -1316,41 +1144,6 @@ df_test_conf_correct <-
 df_test_conf_score %>%
   output_posthoc_result("posthoc_wilcox_test_conf_correct", analysis_group = "conf_correct")
 
-
-
-## -----------------------------------------------------------------------------
-(df_rule_hit_for_test %>%
-  mutate(
-    Correct = if_else(Correct, "correct", "incorrect")
-  ) %>%
-  summarize_performance(Correct, zConfidence, DisplayScore) %>%
-  ggplot(aes(x = DisplayScore, y = mean_zConfidence, group = interaction(DisplayScore, Correct), fill = "black", alpha = DisplayScore, linetype = Correct)) +
-  gg_filled_box_sina() +
-  theme_fig_boxplot +
-  guides(alpha = FALSE, linetype = guide_legend(override.aes = list(color = "black"))) +
-  labs(linetype = "") +
-  xlab("score") +
-  ylab("confidence")) %T>%
-  save_svg_figure(
-    "conf_correct_score_fig",
-    analysis_group = "conf_correct",
-    scaling = fig_anova_scale,
-    width = fig_anova_width,
-    height = fig_anova_height,
-    unit = "mm"
-  )
-
-df_rule_hit_for_test %>%
-  mutate(
-    Correct = if_else(Correct, "correct", "incorrect")
-  ) %>%
-  do_anova(Correct, DisplayScore, zConfidence, tech = FALSE) %>%
-  sink_analysis(
-    "anova_conf_correct_score.txt",
-    analysis_group = "conf_correct"
-  )
-
-
 ## Figure 2 A-------------------------------------------------------------------
 p_accuracy_score_truerule <-
   df_rule_hit %>%
@@ -1363,7 +1156,7 @@ df_rule_hit %>%
   group_by(PlayerID, TrueRule, DisplayScore) %>%
   summarise(`p(correct state inference)` = mean(Correct)) %>%
   group_by(TrueRule, DisplayScore) %>%
-  wilcox_test(`p(correct state inference)` ~ 1, mu = 0.5) %>%
+  rstatix::wilcox_test(`p(correct state inference)` ~ 1, mu = 0.5) %>%
   adjust_pvalue(method = "fdr") %>%
   add_significance() %>%
   output_csv(
@@ -1396,42 +1189,6 @@ df_rule_hit_for_test %>%
 df_posthoc_acc_score_truerule <- df_rule_hit %>% summary_posthoc_test2(Correct, DisplayScore, TrueRule)
 
 
-
-## -------------------------------------------------------------------
-p_accuracy_score_estrule <-
-  df_rule_hit %>%
-  plot_score_rule(EstRule, Correct, DisplayScore, .alpha = DisplayScore, .fill = EstRule) +
-  theme_fig + ylab("p(correct state inference)") + xlab(est_rule_name) + labs(alpha = "score") + guides(fill = FALSE) +
-  theme(legend.position = "right")
-p_accuracy_score_estrule %>% save_svg_figure("p_accuracy_score_estrule", analysis_group = "accuracy_score_estrule", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
-
-
-## -------------------------------------------------------------------
-
-df_rule_hit_for_test %>%
-  summarize_performance(DisplayScore, Correct, EstRule) %>%
-  select(PlayerID, DisplayScore, EstRule, mean_Correct) %>%
-  anovakun("sAB", long = TRUE, gg = TRUE) %>%
-  sink_analysis(filename = "anova_DisplayScore_EstRule_mean_Correct.txt", analysis_group = "accuracy_score_estrule")
-
-df_rule_hit_for_test %>%
-  lme4::glmer(Correct ~ EstRule * DisplayScore + (1 | PlayerID),
-    data = .,
-    family = binomial
-  ) %>%
-  output_lme_results("lme_accuracy_score_estrule", analysis_group = "accuracy_score_estrule")
-
-df_rule_hit_for_test %>%
-  summarize_performance(DisplayScore, Correct, EstRule) %>%
-  select(PlayerID, DisplayScore, EstRule, mean_Correct) %>%
-  posthoc_wilcox_test2(mean_Correct, EstRule, DisplayScore) %>%
-  output_posthoc_result("posthoc_wilcox_test_accuracy_score_estrule", analysis_group = "accuracy_score_estrule")
-
-
-## -------------------------------------------------------------------
-df_posthoc_acc_score_estrule <- df_rule_hit %>% summary_posthoc_test2(Correct, DisplayScore, EstRule)
-
-
 ## Figure 5 A -------------------------------------------------------------------
 p_conf_score_truerule <- df_rule_hit %>%
   plot_score_rule(TrueRule, zConfidence, DisplayScore, .alpha = DisplayScore, .fill = TrueRule) +
@@ -1447,14 +1204,6 @@ df_rule_hit_for_test %>%
   anovakun("sAB", long = TRUE, gg = TRUE) %>%
   sink_analysis(filename = "anova_DisplayScore_TrueRule_mean_zConfidence.txt", analysis_group = "conf_score_truerule")
 
-df_rule_hit_for_test %>%
-  group_by(PlayerID) %>%
-  mutate(scale_conf = scale(EstRuleConfidence, center = FALSE, scale = TRUE)) %>%
-  ungroup() %>%
-  lmerTest::lmer(scale_conf ~ TrueRule * DisplayScore + (1 | PlayerID), data = .) %>%
-  output_lme_results("lme_conf_score_truerule", analysis_group = "conf_score_truerule")
-
-
 ## -------------------------------------------------------------------
 df_rule_hit_for_test %>%
   summarize_performance(DisplayScore, zConfidence, TrueRule) %>%
@@ -1465,39 +1214,6 @@ df_rule_hit_for_test %>%
 
 ## -------------------------------------------------------------------
 df_posthoc_conf_score_truerule <- df_rule_hit %>% summary_posthoc_test2(zConfidence, DisplayScore, TrueRule)
-
-
-## -------------------------------------------------------------------
-p_conf_score_estrule <-
-  df_rule_hit %>%
-  plot_score_rule(EstRule, zConfidence, DisplayScore, .alpha = DisplayScore, .fill = EstRule) +
-  theme_fig + ylab("confidence") + xlab(est_rule_name) +
-  labs(fill = est_rule_name, alpha = "score") + guides(fill = FALSE) +
-  theme(legend.position = "right")
-# theme(legend.position = "none")
-p_conf_score_estrule %>% save_svg_figure("p_conf_score_estrule", analysis_group = "conf_score_estrule", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
-
-
-## -------------------------------------------------------------------
-df_rule_hit_for_test %>%
-  summarize_performance(DisplayScore, zConfidence, EstRule) %>%
-  select(PlayerID, DisplayScore, EstRule, mean_zConfidence) %>%
-  anovakun("sAB", long = TRUE, gg = TRUE) %>%
-  sink_analysis(filename = "anova_DisplayScore_EstRule_mean_zConfidence.txt", analysis_group = "conf_score_estrule")
-
-df_rule_hit_for_test %>%
-  group_by(PlayerID) %>%
-  mutate(scale_conf = scale(EstRuleConfidence, center = FALSE, scale = TRUE)) %>%
-  ungroup() %>%
-  lmerTest::lmer(scale_conf ~ EstRule * DisplayScore + (1 | PlayerID), data = .) %>%
-  output_lme_results("lme_conf_score_estrule", analysis_group = "conf_score_estrule")
-
-df_rule_hit_for_test %>%
-  summarize_performance(DisplayScore, zConfidence, EstRule) %>%
-  select(PlayerID, DisplayScore, EstRule, mean_zConfidence) %>%
-  posthoc_wilcox_test2(mean_zConfidence, EstRule, DisplayScore) %>%
-  output_posthoc_result("posthoc_wilcox_test_conf_score_estrule", analysis_group = "conf_score_estrule")
-
 
 ## -------------------------------------------------------------------
 df_posthoc_conf_score_estrule <- df_rule_hit %>% summary_posthoc_test2(zConfidence, DisplayScore, EstRule)
@@ -1576,40 +1292,12 @@ p_conf_switch %>% save_svg_figure("p_conf_switch",
   labs(color = "true state")) %>%
   save_svg_figure("p_switch_conf_truerule", analysis_group = "switch_conf_truerule")
 
-df_rule_hit_for_test %>%
-  process_for_summary_anova() %>%
-  glmer(switch ~ conf_binary * TrueRule +
-    (conf_binary * TrueRule | PlayerID), data = ., family = binomial) %>%
-  output_lme_results("lme_switch_conf_truerule", analysis_group = "switch_conf_truerule")
 
 df_rule_hit %>%
   process_for_summary_anova() %>%
   do_anova(prev_choice, DisplayScore, switch, tech = F) %>%
   print() %>%
   sink_analysis(filename = "anova_DisplayScore_switch_prev_choice_score.txt", analysis_group = "switch_prev_choice_score")
-
-df_rule_hit_for_test %>%
-  process_for_summary_anova() %>%
-  lme4::glmer(switch ~ prev_choice * DisplayScore + (1 | PlayerID), data = ., family = binomial) %>%
-  print() %>%
-  output_lme_results("lme_switch_prev_choice_score", analysis_group = "switch_prev_choice_score")
-
-
-## -------------------------------------------------------------------
-df_rule_hit %>%
-  process_for_summary_anova() %>%
-  do_anova(prev_choice, DisplayScore, switch) %>%
-  print_anova_sentences()
-
-
-## -------------------------------------------------------------------
-df_test_score_prev_switch <-
-  df_rule_hit %>%
-  process_for_summary_anova() %>%
-  summary_posthoc_test2(switch, DisplayScore, prev_choice)
-
-df_test_score_prev_switch %>%
-  output_posthoc_result("posthoc_wilcox_test_switch_prev_choice_score", analysis_group = "switch_prev_choice_score")
 
 
 ## -------------------------------------------------------------------
@@ -1618,12 +1306,6 @@ df_rule_hit %>%
   do_anova(conf_binary, DisplayScore, switch, tech = F) %>%
   print() %>%
   sink_analysis(filename = "anova_DisplayScore_conf_switch.txt", analysis_group = "switch_conf_score")
-
-df_rule_hit_for_test %>%
-  process_for_summary_anova() %>%
-  lme4::glmer(switch ~ conf_binary * DisplayScore + (1 | PlayerID), data = ., family = binomial) %>%
-  output_lme_results("lme_switch_conf_score", analysis_group = "switch_conf_score")
-
 
 ## -------------------------------------------------------------------
 df_rule_hit %>%
@@ -1651,206 +1333,6 @@ df_test_score_conf_switch %>%
 
 
 ## -------------------------------------------------------------------
-p_distance_and_choice_conf <- df_rule_hit %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore), `P(Skill)` = as.numeric(EstRule == "skill"), PlayerID = as.factor(PlayerID), EstRuleConfidence = as.factor(EstRuleConfidence), scaledDistance = Distance / threshold) %>%
-  ggplot(aes(x = scaledDistance, y = `P(Skill)`, group = EstRuleConfidence)) +
-  geom_smooth(aes(color = EstRuleConfidence), method = "glm", method.args = list(family = binomial(link = "logit")), se = FALSE) +
-  geom_line(stat = "smooth", aes(group = PlayerID, alpha = 0.2), alpha = 0.2, method = "glm", method.args = list(family = binomial(link = "logit")), se = FALSE) +
-  xlab("normalised distance") +
-  labs(color = "confidence level") +
-  facet_grid(. ~ DisplayScore) +
-  theme_fig +
-  scale_color_hue()
-
-p_distance_and_choice_conf %>%
-  save_svg_figure("p_distance_and_choice_conf",
-    analysis_group = "distance_and_choice_conf",
-    scaling = fig_anova_scale, width = 8 * 25.4 * fig_anova_scale, height = 5 * 25.4 * fig_anova_scale, unit = "mm"
-  )
-
-p_choice_distance_score <- (df_rule_hit %>%
-  mutate(
-    DisplayScore = numeric_score_to_strings(DisplayScore),
-    `P(Skill)` = as.numeric(EstRule == "skill"),
-    PlayerID = as.factor(PlayerID),
-    EstRuleConfidence = as.factor(EstRuleConfidence), scaledDistance = Distance / threshold
-  ) %>%
-  ggplot(aes(x = scaledDistance, y = `P(Skill)`, group = DisplayScore, color = DisplayScore)) +
-  geom_smooth(aes(color = DisplayScore), method = "glm", method.args = list(family = binomial(link = "logit")), se = FALSE) +
-  geom_line(stat = "smooth", aes(group = interaction(PlayerID, DisplayScore), alpha = 0.2), alpha = 0.2, method = "glm", method.args = list(family = binomial(link = "logit")), se = FALSE) +
-  xlab("normalised distance") +
-  theme_fig +
-  labs(color = "score")) %T>%
-  save_svg_figure("choice_distance_score",
-    analysis_group = "distance_and_choice_conf",
-    scaling = fig_anova_scale, unit = "mm",
-    width = fig_anova_width,
-    height = fig_anova_height
-  )
-
-
-## -----------------------------------------------------------------------------
-# x: distance, y: accuracy
-# p_distance_and_accuracy =
-df_rule_hit %>%
-  mutate(
-    DisplayScore = if_else(DisplayScore > 0, "positive", "negative")
-  ) %>%
-  ggplot(aes(
-    x = Distance / true_threshold,
-    y = as.numeric(Correct),
-    group = DisplayScore,
-    color = DisplayScore
-  )) +
-  geom_smooth(
-    method = "glm",
-    method.args = list(family = binomial(link = "logit")),
-    se = FALSE
-  ) +
-  geom_line(
-    stat = "smooth",
-    aes(
-      group = interaction(PlayerID, DisplayScore),
-      alpha = 0.2
-    ),
-    alpha = 0.2,
-    method = "glm",
-    method.args = list(family = binomial(link = "logit")),
-    se = FALSE
-  ) +
-  xlab("normalised distance") +
-  ylab("p(correct state inference)") +
-  theme_fig +
-  labs(color = "score")
-
-# x: distance, y: accuracy, color: true state
-# p_distance_and_accuracy_true =
-df_rule_hit %>%
-  mutate(
-    DisplayScore = if_else(DisplayScore > 0, "positive", "negative")
-  ) %>%
-  ggplot(aes(
-    x = Distance / true_threshold,
-    y = as.numeric(Correct),
-    group = TrueRule,
-    color = TrueRule
-  )) +
-  geom_smooth(
-    method = "glm",
-    method.args = list(family = binomial(link = "logit")),
-    se = FALSE
-  ) +
-  geom_line(
-    stat = "smooth",
-    aes(
-      group = interaction(PlayerID, TrueRule),
-      alpha = 0.2
-    ),
-    alpha = 0.2,
-    method = "glm",
-    method.args = list(family = binomial(link = "logit")),
-    se = FALSE
-  ) +
-  xlab("normalised distance") +
-  ylab("p(correct state inference)") +
-  theme_fig +
-  labs(color = "task state")
-
-# x: distance, y: accuracy, color: score, facet: true state
-# p_distance_and_accuracy_score =
-df_rule_hit %>%
-  mutate(
-    DisplayScore = if_else(DisplayScore > 0, "positive", "negative")
-  ) %>%
-  ggplot(aes(
-    x = Distance / true_threshold,
-    y = as.numeric(Correct),
-    group = DisplayScore,
-    color = DisplayScore
-  )) +
-  geom_smooth(
-    method = "glm",
-    method.args = list(family = binomial(link = "logit")),
-    se = FALSE
-  ) +
-  geom_line(
-    stat = "smooth",
-    aes(
-      group = interaction(PlayerID, DisplayScore),
-      alpha = 0.2
-    ),
-    alpha = 0.2,
-    method = "glm",
-    method.args = list(family = binomial(link = "logit")),
-    se = FALSE
-  ) +
-  xlab("normalised distance") +
-  ylab("p(correct state inference)") +
-  theme_fig +
-  labs(color = "score") +
-  facet_wrap(~TrueRule)
-
-
-## -------------------------------------------------------------------
-p_prev_estimation_distance <-
-  df_rule_hit %>%
-  group_by(PlayerID) %>%
-  mutate(
-    prev_choice = lag(EstRule),
-    DisplayScore = numeric_score_to_strings(DisplayScore),
-    conf_binary = if_else(zConfidence > 0, "high", "low"),
-    switch = prev_choice != EstRule,
-    scaledDistance = Distance / threshold
-  ) %>%
-  ungroup() %>%
-  group_by(PlayerID, prev_choice) %>%
-  summarize(scaledDistance = mean(scaledDistance)) %>%
-  drop_na() %>%
-  ggplot(aes(x = prev_choice, y = scaledDistance, group = prev_choice, color = prev_choice)) +
-  geom_boxplot(aes(group = prev_choice), width = box_width_2box, show.legend = FALSE, outlier.shape = NA) +
-  # geom_line(show.legend = FALSE, alpha = 0.8, color = "grey") +
-  geom_sina_fitted(alpha = 0.2, show.legend = FALSE, maxwidth = (box_width_2box / 0.75) * 0.5) +
-  geom_signif(comparisons = list(c("random", "skill")), test = "wilcox.test", map_signif_level = TRUE, test.args = list(paired = TRUE, exact = TRUE), color = "black", textsize = 6, margin_top = 0.15) +
-  theme_fig +
-  coord_cartesian(ylim = c(0, 5)) +
-  xlab("previous estimation") +
-  ylab("normalised distance")
-
-p_prev_estimation_distance %>%
-  save_svg_figure("p_prev_estimation_distance",
-    analysis_group = "distance_prev_choice",
-    scaling = fig_anova_scale, width = fig_2box_width, height = fig_2box_height, unit = "mm"
-  )
-
-
-df_rule_hit %>%
-  group_by(PlayerID) %>%
-  mutate(
-    prev_choice = lag(EstRule),
-    DisplayScore = numeric_score_to_strings(DisplayScore),
-    conf_binary = if_else(zConfidence > 0, "high", "low"),
-    switch = prev_choice != EstRule,
-    scaledDistance = Distance / threshold
-  ) %>%
-  ungroup() %>%
-  group_by(PlayerID, prev_choice) %>%
-  summarize(scaledDistance = mean(scaledDistance)) %>%
-  drop_na() %>%
-  posthoc_wilcox_test(scaledDistance ~ prev_choice) %>%
-  output_posthoc_result("posthoc_wilcox_test_prev_estimation_distance",
-    analysis_group = "distance_prev_choice"
-  )
-
-
-
-
-
-## -----------------------------------------------------------------------------
-p_switch_distance / (p_choice_distance_score | p_prev_estimation_distance)
-
-
-
-## -------------------------------------------------------------------
 df_distance <-
   df_rule_hit %>%
   group_by(PlayerID) %>%
@@ -1866,73 +1348,6 @@ df_distance <-
     normalized_distance_from_prev = distance_from_prev / threshold,
     normalized_distance_from_next = distance_from_next / threshold
   )
-
-p_distance_diff_prev <-
-  df_distance %>%
-  summarize_performance(EstRule, normalized_distance_from_prev, DisplayScore) %>%
-  mutate(condition = interaction(DisplayScore, EstRule)) %>%
-  ggplot(aes(x = EstRule, y = mean_normalized_distance_from_prev, group = interaction(EstRule, DisplayScore), fill = EstRule, alpha = DisplayScore)) +
-  gg_filled_box_sina() +
-  geom_hline(yintercept = 0) +
-  xlab(bquote("[" * .(est_rule_name) * "]"[t])) +
-  ylab(expression(paste(
-    {
-      `[distance]`[t]
-    },
-    " - ",
-    {
-      `[distance]`[t - 1]
-    }
-  ))) +
-  theme_fig +
-  theme(legend.position = "right") +
-  labs(alpha = expression(paste({
-    `[score]`[t]
-  })), fill = "") +
-  guides(fill = FALSE) +
-  guides(alpha = guide_legend(override.aes = list(color = "black", fill = c("black")))) +
-  theme(
-    axis.title.y = element_text(size = 12)
-  )
-
-p_distance_diff_prev %>% save_svg_figure("p_distance_diff_prev",
-  analysis_group = "distance_diff_prev",
-  scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm"
-)
-
-
-## -------------------------------------------------------------------
-df_distance %>%
-  drop_na(prev_distance) %>%
-  select(-next_distance) %>%
-  do_anova(EstRule, DisplayScore, normalized_distance_from_prev) %>%
-  print_anova_sentences()
-df_distance %>%
-  drop_na(prev_distance) %>%
-  select(-next_distance) %>%
-  do_anova(EstRule, DisplayScore, normalized_distance_from_prev, tech = FALSE) %>%
-  print() %>%
-  sink_analysis(filename = "anova_DisplayScore_EstRule_distance_from_prev.txt", analysis_group = "distance_diff_prev")
-
-
-## -------------------------------------------------------------------
-df_distance %>%
-  drop_na(prev_distance) %>%
-  select(-next_distance) %>%
-  summarize_performance(
-    DisplayScore,
-    normalized_distance_from_prev,
-    EstRule
-  ) %>%
-  posthoc_wilcox_test2(
-    mean_normalized_distance_from_prev,
-    DisplayScore, EstRule
-  ) %>%
-  output_posthoc_result(
-    "posthoc_wilcox_test_DisplayScore_EstRule_distance_from_prev",
-    analysis_group = "distance_diff_prev"
-  )
-
 
 ## Supplementary Figure 4C -------------------------------------------------------------------
 p_distance_diff_next <-
@@ -2002,599 +1417,9 @@ df_distance %>%
     analysis_group = "distance_diff_next"
   )
 
-## -----------------------------------------------------------------------------
-calc_conf_dis_difference <- function(df) {
-  df %>%
-    mutate(scaledDistance = Distance / threshold) %>%
-    group_by(PlayerID) %>%
-    mutate(
-      prev_distance = lag(scaledDistance),
-      prev_conf = lag(zConfidence)
-    ) %>%
-    mutate(
-      diff_conf = zConfidence - prev_conf,
-      diff_dis = scaledDistance - prev_distance
-    ) %>%
-    ungroup() %>%
-    select(PlayerID, TrialID, TrialsAfterSwitchToRandom, TrialsAfterSwitchToSkill, diff_conf, diff_dis) %>%
-    pivot_longer(cols = c(TrialsAfterSwitchToSkill, TrialsAfterSwitchToRandom), names_to = "switch", values_to = "Trials")
-}
-lm_diff_conf_dis <- function(df, trials) {
-  df2 <- df %>%
-    calc_conf_dis_difference() %>%
-    dplyr::filter(Trials == trials)
-
-  res_all <- df2 %>%
-    estimatr::lm_robust(diff_dis ~ diff_conf * switch, data = .) %>%
-    tidy() %>%
-    mutate(formula = "diff_dis ~ diff_conf * switch")
-  res_post_skill <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToSkill") %>%
-    estimatr::lm_robust(diff_dis ~ diff_conf, data = .) %>%
-    tidy() %>%
-    mutate(formula = "diff_dis ~ diff_conf (random to skill)")
-  res_post_random <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToRandom") %>%
-    estimatr::lm_robust(diff_dis ~ diff_conf, data = .) %>%
-    tidy() %>%
-    mutate(formula = "diff_dis ~ diff_conf (skill to random)")
-  rbind(res_all, res_post_skill, res_post_random) %>%
-    select(formula, term, estimate, std.error, statistic, p.value, df)
-}
-
-lm_diff_conf_dis_abs <- function(df, trials) {
-  df2 <- df %>%
-    calc_conf_dis_difference() %>%
-    dplyr::filter(Trials == trials)
-
-  res_all <- df2 %>%
-    estimatr::lm_robust(abs(diff_dis) ~ abs(diff_conf) * switch, data = .) %>%
-    tidy() %>%
-    mutate(formula = "abs(diff_dis) ~ abs(diff_conf) * switch")
-  res_post_skill <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToSkill") %>%
-    estimatr::lm_robust(abs(diff_dis) ~ abs(diff_conf), data = .) %>%
-    tidy() %>%
-    mutate(formula = "abs(diff_dis) ~ abs(diff_conf) (random to skill)")
-  res_post_random <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToRandom") %>%
-    estimatr::lm_robust(abs(diff_dis) ~ abs(diff_conf), data = .) %>%
-    tidy() %>%
-    mutate(formula = "abs(diff_dis) ~ abs(diff_conf) (skill to random)")
-  rbind(res_all, res_post_skill, res_post_random) %>%
-    select(formula, term, estimate, std.error, statistic, p.value, df)
-}
-
-lm_diff_conf_dis_mean_abs <- function(df, trials) {
-  df2 <- df %>%
-    calc_conf_dis_difference() %>%
-    dplyr::filter(Trials == trials) %>%
-    group_by(PlayerID, switch) %>%
-    summarise(diff_dis = mean(diff_dis), diff_conf = mean(diff_conf)) %>%
-    ungroup()
-
-  res_all <- df2 %>%
-    estimatr::lm_robust(abs(diff_dis) ~ abs(diff_conf) * switch, data = .) %>%
-    tidy() %>%
-    mutate(formula = "abs(diff_dis) ~ abs(diff_conf) * switch")
-  res_post_skill <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToSkill") %>%
-    estimatr::lm_robust(abs(diff_dis) ~ abs(diff_conf), data = .) %>%
-    tidy() %>%
-    mutate(formula = "abs(diff_dis) ~ abs(diff_conf) (random to skill)")
-  res_post_random <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToRandom") %>%
-    estimatr::lm_robust(abs(diff_dis) ~ abs(diff_conf), data = .) %>%
-    tidy() %>%
-    mutate(formula = "abs(diff_dis) ~ abs(diff_conf) (skill to random)")
-  rbind(res_all, res_post_skill, res_post_random) %>%
-    select(formula, term, estimate, std.error, statistic, p.value, df)
-}
-
-lm_diff_conf_dis_mean <- function(df, trials) {
-  df2 <- df %>%
-    calc_conf_dis_difference() %>%
-    dplyr::filter(Trials == trials) %>%
-    group_by(PlayerID, switch) %>%
-    summarise(diff_dis = mean(diff_dis), diff_conf = mean(diff_conf)) %>%
-    ungroup()
-  res_all <- df2 %>%
-    estimatr::lm_robust(diff_dis ~ diff_conf * switch, data = .) %>%
-    tidy() %>%
-    mutate(formula = "diff_dis ~ diff_conf * switch")
-  res_post_skill <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToSkill") %>%
-    estimatr::lm_robust(diff_dis ~ diff_conf, data = .) %>%
-    tidy() %>%
-    mutate(formula = "diff_dis ~ diff_conf (random to skill)")
-  res_post_random <- df2 %>%
-    dplyr::filter(switch == "TrialsAfterSwitchToRandom") %>%
-    estimatr::lm_robust(diff_dis ~ diff_conf, data = .) %>%
-    tidy() %>%
-    mutate(formula = "diff_dis ~ diff_conf (skill to random)")
-  rbind(res_all, res_post_skill, res_post_random) %>%
-    select(formula, term, estimate, std.error, statistic, p.value, df)
-}
-
-## -----------------------------------------------------------------------------
-label_conf_dis_diff <- c(
-  "2nd - 1st",
-  "3rd - 2nd"
-)
-
-(df_rule_hit %>%
-  calc_conf_dis_difference() %>%
-  filter(Trials < 3 & Trials >= 1) %>% group_by(PlayerID, Trials, switch) %>%
-  summarise(mean_diff_dis = mean(diff_dis), mean_diff_conf = mean(diff_conf)) %>%
-  mutate(
-    switch =
-      str_replace_all(switch, "TrialsAfterSwitchToRandom", "skill to random") %>%
-        str_replace_all("TrialsAfterSwitchToSkill", "random to skill")
-  ) %>%
-  mutate(Trials = label_conf_dis_diff[Trials] %>% unlist()) %>%
-  ggplot(aes(x = mean_diff_conf %>% abs(), y = mean_diff_dis %>% abs(), color = switch)) +
-  geom_point() +
-  stat_smooth(method = estimatr::lm_robust) +
-  stat_smooth(aes(group = 1), color = "black", method = estimatr::lm_robust) +
-  facet_wrap(. ~ Trials) +
-  theme_fig +
-  xlab("|mean difference of confidence|") +
-  ylab("|mean difference of distance|")) %>% save_svg_figure("conf_dis_diff_mean_abs", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm", analysis_group = "conf_dis_diff")
-
-(df_rule_hit %>%
-  calc_conf_dis_difference() %>%
-  filter(Trials < 3 & Trials >= 1) %>% group_by(PlayerID, Trials, switch) %>%
-  summarise(mean_diff_dis = mean(diff_dis), mean_diff_conf = mean(diff_conf)) %>%
-  mutate(
-    switch =
-      str_replace_all(switch, "TrialsAfterSwitchToRandom", "skill to random") %>%
-        str_replace_all("TrialsAfterSwitchToSkill", "random to skill")
-  ) %>%
-  mutate(Trials = label_conf_dis_diff[Trials] %>% unlist()) %>%
-  ggplot(aes(x = mean_diff_conf, y = mean_diff_dis, color = switch)) +
-  geom_point() +
-  stat_smooth(method = estimatr::lm_robust) +
-  stat_smooth(aes(group = 1), color = "black", method = estimatr::lm_robust) +
-  facet_wrap(. ~ Trials) +
-  theme_fig +
-  xlab("mean difference of confidence") +
-  ylab("mean difference of distance")) %>% save_svg_figure("conf_dis_diff_mean", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm", analysis_group = "conf_dis_diff")
-
-(df_rule_hit %>%
-  calc_conf_dis_difference() %>%
-  filter(Trials < 3 & Trials >= 1) %>%
-  mutate(
-    switch =
-      str_replace_all(switch, "TrialsAfterSwitchToRandom", "skill to random") %>%
-        str_replace_all("TrialsAfterSwitchToSkill", "random to skill")
-  ) %>%
-  mutate(Trials = label_conf_dis_diff[Trials] %>% unlist()) %>%
-  ggplot(aes(x = diff_conf %>% abs(), y = diff_dis %>% abs(), color = switch)) +
-  geom_point() +
-  stat_smooth(method = estimatr::lm_robust) +
-  stat_smooth(aes(group = 1), color = "black", method = estimatr::lm_robust) +
-  facet_wrap(. ~ Trials) +
-  theme_fig1 +
-  xlab("|difference of confidence|") +
-  ylab("|difference of distance|")) %>% save_svg_figure("conf_dis_diff_abs", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm", analysis_group = "conf_dis_diff")
-
-(df_rule_hit %>%
-  calc_conf_dis_difference() %>%
-  filter(Trials < 3 & Trials >= 1) %>%
-  mutate(
-    switch =
-      str_replace_all(switch, "TrialsAfterSwitchToRandom", "skill to random") %>%
-        str_replace_all("TrialsAfterSwitchToSkill", "random to skill")
-  ) %>%
-  mutate(Trials = label_conf_dis_diff[Trials] %>% unlist()) %>%
-  ggplot(aes(x = diff_conf, y = diff_dis, color = switch)) +
-  geom_point() +
-  stat_smooth(method = estimatr::lm_robust) +
-  stat_smooth(aes(group = 1), color = "black", method = estimatr::lm_robust) +
-  facet_wrap(. ~ Trials) +
-  theme_fig1 +
-  xlab("difference of confidence") +
-  ylab("difference of distance")) %>% save_svg_figure("conf_dis_diff", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm", analysis_group = "conf_dis_diff")
-
-## -----------------------------------------------------------------------------
-df_rule_hit %>%
-  calc_conf_dis_difference() %>%
-  filter(Trials < 3 & Trials >= 1) %>%
-  mutate(
-    switch =
-      str_replace_all(switch, "TrialsAfterSwitchToRandom", "skill to random") %>%
-        str_replace_all("TrialsAfterSwitchToSkill", "random to skill")
-  ) %>%
-  mutate(Trials = label_conf_dis_diff[Trials] %>% unlist()) %>%
-  group_by(Trials) %>%
-  nest() %>%
-  tibble_lme(diff_dis ~ diff_conf * switch + (1 | PlayerID)) %>%
-  unnest(cols = c(res)) %>%
-  select(-data) %>%
-  rbind(
-    df_rule_hit %>%
-      calc_conf_dis_difference() %>%
-      filter(Trials < 3 & Trials >= 1) %>%
-      mutate(
-        switch =
-          str_replace_all(switch, "TrialsAfterSwitchToRandom", "skill to random") %>%
-            str_replace_all("TrialsAfterSwitchToSkill", "random to skill")
-      ) %>%
-      mutate(Trials = label_conf_dis_diff[Trials] %>% unlist()) %>% group_by(Trials) %>% nest() %>%
-      tibble_lme(abs(diff_dis) ~ abs(diff_conf) * switch + (1 | PlayerID)) %>% unnest(cols = c(res)) %>% select(-data)
-  ) %>%
-  select(formula, everything()) %>%
-  output_csv(
-    "lmer_diff_conf_dis.csv",
-    analysis_group = "diff_conf_dis"
-  )
-
-
-## -----------------------------------------------------------------------------
-df_rule_hit %>%
-  lm_diff_conf_dis_mean(1) %>%
-  output_csv("lm_diff_conf_dis_mean(1).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis_mean(2) %>%
-  output_csv("lm_diff_conf_dis_mean(2).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis_mean_abs(1) %>%
-  output_csv("lm_diff_conf_dis_mean_abs(1).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis_mean_abs(2) %>%
-  output_csv("lm_diff_conf_dis_mean_abs(2).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis(1) %>%
-  output_csv("lm_diff_conf_dis(1).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis(2) %>%
-  output_csv("lm_diff_conf_dis(2).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis_abs(1) %>%
-  output_csv("lm_diff_conf_dis_abs(1).csv", analysis_group = "diff_conf_dis")
-df_rule_hit %>%
-  lm_diff_conf_dis_abs(2) %>%
-  output_csv("lm_diff_conf_dis_abs(2).csv", analysis_group = "diff_conf_dis")
-
-
-
-## ----prev_correct-------------------------------------------------------------
-df_rule_hit %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(prev_correct = if_else(lag(Correct, 1), "correct", "incorrect")) %>%
-  drop_na(prev_correct) %>%
-  ungroup() %>%
-  group_by(PlayerID, prev_correct, DisplayScore) %>%
-  summarise(performance = mean(Correct)) %>%
-  ggplot(aes(x = prev_correct, y = performance, group = interaction(prev_correct, DisplayScore), alpha = DisplayScore, fill = "black")) +
-  gg_filled_box_sina() +
-  theme_fig +
-  guides(alpha = guide_legend(override.aes = list(color = "black", fill = c("black")))) +
-  ylab("p(correct state inference)") +
-  xlab("previous trial") +
-  labs(alpha = "score")
-
-df_rule_hit %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(
-    prev_correct =
-      if_else(lag(Correct, 1), "correct", "incorrect"),
-    prev_score = lag(DisplayScore)
-  ) %>%
-  drop_na(prev_correct) %>%
-  ungroup() %>%
-  group_by(PlayerID, prev_score) %>%
-  summarise(mean_score = mean(DisplayScore == "positive")) %>%
-  ggplot(aes(x = prev_score, y = mean_score, group = prev_score, alpha = prev_score, fill = "black")) +
-  gg_filled_box_sina() +
-  theme_fig +
-  guides(alpha = guide_legend(override.aes = list(color = "black", fill = c("black")))) +
-  ylab("p(positive)") +
-  xlab("previous trial") +
-  labs(alpha = "score")
-
-df_rule_hit %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(
-    prev_correct =
-      if_else(lag(Correct, 1), "correct", "incorrect"),
-    prev_score = lag(DisplayScore)
-  ) %>%
-  drop_na(prev_correct) %>%
-  ungroup() %>%
-  group_by(PlayerID, prev_score, prev_correct) %>%
-  summarise(mean_score = mean(DisplayScore == "positive")) %>%
-  ggplot(aes(x = prev_correct, y = mean_score, group = interaction(prev_score, prev_correct), alpha = prev_score, fill = "black")) +
-  gg_filled_box_sina() +
-  theme_fig +
-  guides(alpha = guide_legend(override.aes = list(color = "black", fill = c("black")))) +
-  ylab("p(positive)") +
-  xlab("previous trial") +
-  labs(alpha = "score")
-
-df_rule_hit %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(prev_correct = if_else(lag(Correct, 1), "correct", "incorrect")) %>%
-  drop_na(prev_correct) %>%
-  ungroup() %>%
-  group_by(PlayerID, prev_correct) %>%
-  summarise(performance = mean(Correct)) %>%
-  ggplot(aes(x = prev_correct, y = performance, group = prev_correct, fill = "black", color = "black", alpha = "1")) +
-  gg_filled_box_sina() +
-  theme_fig +
-  guides(alpha = guide_legend(override.aes = list(color = "black", fill = c("black")))) +
-  ylab("p(correct state inference)") +
-  xlab("previous trial")
-
-
-
-## ----score metacognition------------------------------------------------------
-df_score_hit %>%
-  ungroup() %>%
-  mutate(Error = abs(EstScore - TrueScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(zConfidence = scale(EstScoreConfidence), scaledError = scale(Error)) %>%
-  ungroup() %>%
-  lmer(Error ~ zConfidence + (1 + zConfidence | PlayerID), data = .) %>%
-  summary()
-
-df_score_conf_lme <-
-  tibble(
-    PlayerID = df_score_hit %>% pull(PlayerID) %>% unique(),
-    estimate =
-      df_score_hit %>%
-        ungroup() %>%
-        mutate(Error = abs(EstScore - TrueScore)) %>%
-        group_by(PlayerID) %>%
-        mutate(
-          zConfidence = scale(EstScoreConfidence),
-          scaledError = scale(Error)
-        ) %>%
-        ungroup() %>%
-        lmer(scaledError ~ zConfidence + (1 + zConfidence | PlayerID), data = .) %>% coef() %>%
-        `$`(PlayerID) %>%
-        `$`(zConfidence)
-    # true_threshold = df_score_hit %>% group_by(PlayerID) %>% summarise(median = median(Distance)) %>% pull(median)
-  ) %>%
-  inner_join(
-    df_rule_hit %>%
-      mutate(PlayerID = as.character(PlayerID)) %>%
-      select(PlayerID, true_threshold) %>%
-      group_by(PlayerID) %>%
-      summarise(true_threshold = unique(true_threshold)),
-    by = "PlayerID"
-  )
-
-(df_score_hit %>%
-  ungroup() %>%
-  mutate(PlayerID = as.character(PlayerID), Error = abs(EstScore - TrueScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(
-    zConfidence = scale(EstScoreConfidence),
-    scaledError = scale(Error, center = FALSE)
-  ) %>%
-  ungroup() %>%
-  group_by(PlayerID) %>%
-  summarise(error = mean(scaledError)) %>%
-  inner_join(
-    df_rule_hit %>%
-      mutate(PlayerID = as.character(PlayerID)) %>%
-      select(PlayerID, true_threshold) %>%
-      group_by(PlayerID) %>%
-      summarise(true_threshold = unique(true_threshold)),
-    by = "PlayerID"
-  ) %>%
-  ggplot(aes(x = true_threshold, y = error)) +
-  geom_point() +
-  stat_smooth(method = lm_robust, color = "black") +
-  theme_fig +
-  xlab("threshold") +
-  ylab("score estimation error") +
-  theme(plot.margin = margin(10, 10, 10, 10))) %>%
-  save_svg_figure("p_scaled_score_estimate_error_true_threshold",
-    analysis_group = "scaled_score_estimate_error_true_threshold",
-    scaling = fig_anova_scale,
-    width = fig_anova_width,
-    height = fig_anova_height,
-    unit = "mm"
-  )
-
-# output the result of the robust regression of the fig above to a file
-df_score_hit %>%
-  ungroup() %>%
-  mutate(PlayerID = as.character(PlayerID), Error = abs(EstScore - TrueScore)) %>%
-  group_by(PlayerID) %>%
-  mutate(
-    zConfidence = scale(EstScoreConfidence),
-    scaledError = scale(Error, center = FALSE)
-  ) %>%
-  ungroup() %>%
-  group_by(PlayerID) %>%
-  summarise(error = mean(scaledError)) %>%
-  inner_join(
-    df_rule_hit %>%
-      mutate(PlayerID = as.character(PlayerID)) %>%
-      select(PlayerID, true_threshold) %>%
-      group_by(PlayerID) %>%
-      summarise(true_threshold = unique(true_threshold)),
-    by = "PlayerID"
-  ) %>%
-  lm_robust(error ~ true_threshold, data = .) %>%
-  summary() %>%
-  print() %>%
-  sink_analysis(
-    filename = "lm_robust_score_estimate_error_true_threshold.txt",
-    analysis_group = "scaled_score_estimate_error_true_threshold"
-  )
-
-
-
-
-(df_score_conf_lme %>%
-  ggplot(aes(x = true_threshold, y = estimate)) +
-  geom_point() +
-  stat_smooth(method = lm_robust, color = "black") +
-  theme_fig +
-  xlab("threshold") +
-  ylab("coefficient") +
-  theme(plot.margin = margin(10, 10, 10, 10))) %>%
-  save_svg_figure("p_coeff_true_threshold",
-    analysis_group = "coeff_true_threshold",
-    scaling = fig_anova_scale,
-    width = fig_anova_width,
-    height = fig_anova_height,
-    unit = "mm"
-  )
-
-# output the result of the robust regression of the fig above to a file
-df_score_conf_lme %>%
-  lm_robust(estimate ~ true_threshold, data = .) %>%
-  summary() %>%
-  print() %>%
-  sink_analysis(
-    filename = "lm_robust_coeff_true_threshold.txt",
-    analysis_group = "coeff_true_threshold"
-  )
-
-# now factors are columns and observations are rows
-# transform the data so that the colum is the factor of score and the row is the factor of rule
-# the value is mean of correct
-# df_rule_hit_for_test %>%
-#     summarize_performance(DisplayScore, Correct, TrueRule) %>%
-#     select(PlayerID, DisplayScore, TrueRule, mean_Correct) %>%
-#     # pivot_wider(names_from = DisplayScore, values_from = mean_Correct) %>%
-#     rio::export(fs::path("anova", "df_rule_hit_for_test_summary",ext = "csv"))
-
-# df_rule_hit_for_test %>%
-#     summarize_performance(DisplayScore, Correct, TrueRule) %>%
-#     select(PlayerID, DisplayScore, TrueRule, mean_Correct) %>%
-#     pivot_wider(names_from = DisplayScore, values_from = mean_Correct) %>%
-#     rio::export(fs::path("anova", "df_rule_hit_for_test_summary_wide",ext = "csv"))
-
-# df_rule_hit_for_test %>%
-#     summarize_performance(DisplayScore, Correct, TrueRule) %>%
-#     select(PlayerID, DisplayScore, TrueRule, mean_Correct) %>% mutate(PlayerID = as.numeric(as.factor(PlayerID))) %>% pivot_wider(names_from = PlayerID, values_from = mean_Correct, names_prefix = "p") %>%
-#     rio::export(fs::path("anova", "df_rule_hit_for_test_summary_player_wide",ext = "csv"))
-
-# df_rule_hit_for_test %>%
-#     summarize_performance(DisplayScore, Correct, TrueRule) %>%
-#     select(PlayerID, DisplayScore, TrueRule, mean_Correct) %>% mutate(PlayerID = as.numeric(as.factor(PlayerID))) %>%  pivot_wider(names_from = c(TrueRule, DisplayScore), values_from = mean_Correct) %>%
-#   rio::export(fs::path("anova", "df_rule_hit_for_test_summary_flatten",ext = "csv"))
-
-
-## -----------------------------------------------------------------------------
-(df_rule_hit %>%
-  mutate(DisplayScore = if_else(DisplayScore > 0, "positive", "negative")) %>%
-  group_by(PlayerID, EstRuleConfidence, DisplayScore) %>%
-  summarise(skill_rate = mean(EstRule == "skill"), performance = mean(Correct)) %>%
-  ggplot(aes(x = EstRuleConfidence, y = performance, group = PlayerID, color = PlayerID)) +
-  geom_point() +
-  geom_line() +
-  geom_boxplot(aes(group = EstRuleConfidence)) +
-  theme_fig +
-  facet_wrap(. ~ DisplayScore)) %>%
-  save_svg_figure("p_performance_score_conf_rating", analysis_group = "metaconfidence")
-
-(df_rule_hit %>%
-  mutate(DisplayScore = if_else(DisplayScore > 0, "positive", "negative")) %>%
-  group_by(PlayerID, EstRuleConfidence, DisplayScore) %>%
-  summarise(skill_rate = mean(EstRule == "skill"), performance = mean(Correct)) %>%
-  ggplot(aes(x = EstRuleConfidence, y = skill_rate, group = PlayerID, color = PlayerID)) +
-  geom_point() +
-  geom_line() +
-  geom_boxplot(aes(group = EstRuleConfidence)) +
-  theme_fig +
-  facet_wrap(. ~ DisplayScore)) %>%
-  save_svg_figure("p_choice_score_conf_rating", analysis_group = "metaconfidence")
-
-(df_rule_hit %>%
-  mutate(DisplayScore = if_else(DisplayScore > 0, "positive", "negative")) %>%
-  group_by(PlayerID, EstRuleConfidence, TrueRule) %>%
-  summarise(skill_rate = mean(EstRule == "skill"), performance = mean(Correct)) %>%
-  ggplot(aes(x = EstRuleConfidence, y = performance, group = PlayerID, color = PlayerID)) +
-  geom_point() +
-  geom_line() +
-  geom_boxplot(aes(group = EstRuleConfidence)) +
-  theme_fig +
-  labs(subtitle = "true state") +
-  facet_wrap(. ~ TrueRule)) %>%
-  save_svg_figure("p_performance_truerule_conf_rating", analysis_group = "metaconfidence")
-
-(df_rule_hit %>%
-  mutate(DisplayScore = if_else(DisplayScore > 0, "positive", "negative")) %>%
-  group_by(PlayerID, EstRuleConfidence, EstRule) %>%
-  summarise(skill_rate = mean(EstRule == "skill"), performance = mean(Correct)) %>%
-  ggplot(aes(x = EstRuleConfidence, y = performance, group = PlayerID, color = PlayerID)) +
-  geom_point() +
-  geom_line() +
-  geom_boxplot(aes(group = EstRuleConfidence)) +
-  theme_fig +
-  labs(subtitle = "choice") +
-  facet_wrap(. ~ EstRule)) %T>%
-  save_svg_figure("p_performance_choice_conf_rating", analysis_group = "metaconfidence")
-
-## -----------------------------------------------------------------------------
-# x: EstRuleConfidence, y: performance, group: true state
-(df_rule_hit %>%
-  mutate(DisplayScore = if_else(DisplayScore > 0, "positive", "negative")) %>%
-  group_by(PlayerID, EstRuleConfidence, TrueRule) %>%
-  summarise(skill_rate = mean(EstRule == "skill"), performance = mean(Correct)) %>%
-  ggplot(aes(x = EstRuleConfidence, y = performance, group = PlayerID, color = PlayerID)) +
-  geom_point() +
-  geom_line() +
-  geom_boxplot(aes(group = EstRuleConfidence)) +
-  theme_fig +
-  labs(subtitle = "true state") +
-  xlab("confidence rating") +
-  ylab("p(correct state inference)") +
-  facet_wrap(. ~ TrueRule)) %>%
-  save_svg_figure("p_performance_truerule_conf_rating",
-    analysis_group = "metaconfidence",
-    scaling = fig_anova_scale,
-    width = fig_anova_width * 2,
-    height = fig_anova_height,
-    unit = "mm"
-  )
-
-
 ## Supplementary Figure 13A, B, C-----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "meta_d_rule.R"))
 
 
 ## Supplementary Figure 13D -----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "confidence_and_performances.R"))
-
-
-## -----------------------------------------------------------------------------
-# plot timeseries of prediction error (mean across players)
-(df_score_hit %>%
-  group_by(PlayerID) %>%
-  mutate(error = abs(EstScore - TrueScore)) %>%
-  ungroup() %>%
-  group_by(TrialID) %>%
-  summarise(
-    mean_error = mean(error),
-    sd_error = sd(error)
-  ) %>%
-  ggplot(aes(x = TrialID, y = mean_error, group = 1)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = mean_error - sd_error, ymax = mean_error + sd_error), alpha = 0.5) +
-  theme_fig +
-  xlab("trial") +
-  ylab("mean prediction error") +
-  theme(plot.margin = margin(10, 10, 10, 10))) %>%
-  save_svg_figure("score_prediction_error_timeseries",
-    analysis_group = "score_prediction",
-    scaling = fig_anova_scale,
-    width = fig_timeseries_width,
-    height = fig_timeseries_height,
-    unit = "mm"
-  )
-
-
-# facet_wrap(.~PlayerID) %>%
-# save_svg_figure("p_score_prediction_error", analysis_group = "score_prediction")

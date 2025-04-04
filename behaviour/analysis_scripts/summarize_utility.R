@@ -34,6 +34,9 @@ process_for_switch <- function(data, exp_to_be_summarized, summary_var) {
           "skill to random",
           "random to skill"
         )
+    ) %>%
+    mutate(
+      switch = as.factor(switch)
     )
 }
 
@@ -330,7 +333,7 @@ gg_filled_box_sina <- function(box_width = 0.75, maxwidth = 0.5, scale = "width"
   )
 }
 
-posthoc_wilcox_test <- function(data, formula, fixed_factor = NULL, group_col = PlayerID) {
+posthoc_wilcox_test <- function(data, formula, fixed_factor = NULL) {
   factor_levels <- data %>%
     pull(formula[[3]]) %>%
     unique() %>%
@@ -343,7 +346,7 @@ posthoc_wilcox_test <- function(data, formula, fixed_factor = NULL, group_col = 
         map(
           .x = data, .f =
             ~ .x %>%
-              wilcox_test(
+              rstatix::wilcox_test(
                 {{ formula }},
                 paired = TRUE, data = .,
                 exact = TRUE
@@ -353,9 +356,9 @@ posthoc_wilcox_test <- function(data, formula, fixed_factor = NULL, group_col = 
         map(
           .x = data, .f =
             ~ .x %>%
-              select({{ group_col }}, formula[[2]], formula[[3]]) %>%
+              select(PlayerID, formula[[2]], formula[[3]]) %>%
               pivot_wider(names_from = formula[[3]], values_from = formula[[2]]) %>%
-              coin::wilcoxsign_test(as.formula(paste0("`", factor_levels[[2]], "`", "~", "`", factor_levels[[1]], "`")), data = ., distribution = "exact", zero.method = "Wilcoxon")
+              coin::wilcoxsign_test(as.formula(paste0(factor_levels[[2]], "~", factor_levels[[1]])), data = ., distribution = "exact", zero.method = "Wilcoxon")
         ),
       Z = sapply(wilcoxsign, coin::statistic),
       p_coin = sapply(wilcoxsign, coin::pvalue)
@@ -390,7 +393,7 @@ posthoc_wilcox_test2 <- function(data, target, factor1, factor2, .method = "fdr"
         map(
           .x = data, .f =
             ~ .x %>%
-              wilcox_test(
+              rstatix::wilcox_test(
                 formula1,
                 paired = TRUE,
                 exact = TRUE,
@@ -419,7 +422,7 @@ posthoc_wilcox_test2 <- function(data, target, factor1, factor2, .method = "fdr"
         map(
           .x = data, .f =
             ~ .x %>%
-              wilcox_test(
+              rstatix::wilcox_test(
                 formula2,
                 paired = TRUE,
                 exact = TRUE,
@@ -529,7 +532,7 @@ posthoc_wilcox_against_chance <- function(df, formula, chance_level = 0.5, alter
   df_per_score_test_against_chance <- df %>%
     mutate(chance_level = chance_level) %>%
     group_by({{ factor }}) %>%
-    wilcox_test(as.formula(paste0(target, "~ 1")),
+    rstatix::wilcox_test(as.formula(paste0(target, "~ 1")),
       data = .,
       mu = chance_level,
       alternative = alternative,

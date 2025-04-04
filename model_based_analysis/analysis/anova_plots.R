@@ -518,7 +518,7 @@ p_model_behaviour_entropy_score_truerule <-
   ) +
   xlab("participants' confidence") +
   ylab("model confidence") +
-  theme_fig +
+  theme_fig_base +
   theme(legend.position = "right") +
   labs(color = "task state", shape = "score", linetype = "") +
   scale_shape_manual(values = c(
@@ -569,7 +569,7 @@ p_model_behaviour_entropy_score_truerule_facet <- # Supplementary Figure 11
   ) +
   xlab("participants' confidence") +
   ylab("model confidence") +
-  theme_fig +
+  theme_fig_base +
   theme(legend.position = "right") +
   labs(color = "task state", shape = "score", linetype = "") +
   scale_shape_manual(values = c(
