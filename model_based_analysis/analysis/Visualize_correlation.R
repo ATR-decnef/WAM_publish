@@ -52,7 +52,7 @@ convert_label <- function(label) {
 
 
 visualize_correlation <- function(file_name, fig_scale = fig_anova_scale, corr_method = "pearson") {
-  file_name <- here::here("model_based_analysis", file_name)
+  # file_name <- here::here("model_based_analysis", file_name)
   data_name <- file_name %>%
     sub("\\.[^.]*", "", .) %>%
     sub("[^.]*/", "", .)
@@ -80,7 +80,7 @@ visualize_correlation <- function(file_name, fig_scale = fig_anova_scale, corr_m
   corr_df <- data_df %>%
     select(-PlayerID, -iteration) %>%
     cor(method = corr_method) %>%
-    `[`(1:(num_of_params), (2 * num_of_params):(num_of_params + 1)) %T>% View()
+    `[`(1:(num_of_params), (2 * num_of_params):(num_of_params + 1)) # %T>% View()
   # Get p-value matrix
   p_df <- as.data.frame(ggcorrplot::cor_pmat(data_df %>% select(-PlayerID, -iteration))) %>% `[`(1:(num_of_params), (2 * num_of_params):(num_of_params + 1))
 
@@ -88,7 +88,7 @@ visualize_correlation <- function(file_name, fig_scale = fig_anova_scale, corr_m
   p_df_csv$Var1 <- as.factor(rownames(p_df_csv))
   p_df_csv <- melt(p_df_csv, id.vars = "Var1", variable.name = "Var2", value.name = "p")
   p_df_csv %>% export(
-    here::here("results", sprintf("%s_p_df.csv", file_name_no_dot))
+    sprintf("%s_p_df.csv", file_name_no_dot)
   )
 
   # Function to get asteriks
@@ -147,13 +147,8 @@ visualize_correlation <- function(file_name, fig_scale = fig_anova_scale, corr_m
     scale_y_discrete(labels = cor_tick_y) +
     xlab("true") +
     ylab("recovered")
-  # cor_plot_labs = cor_plot +
-  #   geom_text(aes(x = p_labs$Var1,
-  #                 y = p_labs$Var2),
-  #             label = p_labs$lab,
-  #             nudge_y = 0.25,
-  #             size = 12 / fig_scale)  + labs(title = fig_title)
 
+  print(file_name_no_dot_no_path)
   cor_plot_labs %>%
     save_svg_figure(sprintf("%s_corr", file_name_no_dot_no_path),
       analysis_group = "parameter_recovery",
@@ -162,25 +157,11 @@ visualize_correlation <- function(file_name, fig_scale = fig_anova_scale, corr_m
       scale = 0.5
     )
 
-
-  p_density_list <-
-    foreach(param = data_df %>% select(-PlayerID, -iteration) %>% colnames(), .inorder = TRUE) %do% {
-      (data_df %>%
-        ggplot(data = ., aes(x = .data[[param]])) +
-        geom_density() +
-        labs(title = fig_title) +
-        theme_minimal())
-      # ggsave(sprintf("%s_dense_%s.pdf", file_name_no_dot, param), plot = ., width = 100, height = 100, units = "mm")
-    }
-
-  names(p_density_list) <- data_df %>%
-    select(-PlayerID, -iteration) %>%
-    colnames()
   cor_plot_labs
 }
 
 scatter_correlation <- function(file_name, fig_scale = fig_anova_scale) {
-  file_name <- here::here("model_based_analysis", file_name)
+  # file_name <- here::here("model_based_analysis", file_name)
   data_name <- file_name %>%
     sub("\\.[^.]*", "", .) %>%
     sub("[^.]*/", "", .)
@@ -252,7 +233,7 @@ scatter_correlation <- function(file_name, fig_scale = fig_anova_scale) {
   }
 }
 
-file_lists <- list.files("R_result/", pattern = "binary_sign.*recovery_iter_100.rds", full.names = TRUE)
+file_lists <- list.files(here::here("model_based_analysis", "R_result/"), pattern = "binary_sign.*recovery_iter_100.rds", full.names = TRUE)
 file_lists
 
 # cl_i <- makeCluster(min(getOption("mc.cores", detectCores()),  12), outfile = "")
@@ -275,7 +256,6 @@ res <- foreach(
 ) %do% {
   print(filename)
   visualize_correlation(filename, corr_method = "spearman")
-  scatter_correlation(filename)
 }
 
 # stopCluster(cl_i)

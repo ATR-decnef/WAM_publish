@@ -127,18 +127,6 @@ df_AIC_summary %>%
   export(here::here("results", "AIC_summary.csv"))
 
 # plot AIC (Supplementary Figure 5) ====
-p_AIC <- df_MLE_result %>%
-  sanitize_model_name() %>%
-  filter(!str_detect(name, "twice")) %>% # filter unrelated data
-  pivot_wider(names_from = params, values_from = value) %>%
-  ggplot(aes(x = name %>% reorder(AIC, FUN = mean), y = AIC, group = name)) +
-  gg_box_sina() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  theme_fig_anova +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
-  xlab("") +
-  ylab("AIC")
-
 (df_MLE_result %>%
   sanitize_model_name() %>%
   filter(!str_detect(name, "twice")) %>% # filter unrelated data
@@ -210,85 +198,6 @@ df_AIC %>%
     "posthoc_test_AIC",
     analysis_group = "model_comparison"
   )
-
-p_AIC %>% save_svg_figure("p_AIC",
-  width = fig_AIC_width,
-  height = fig_AIC_height,
-  scaling = fig_anova_scale,
-  analysis_group = "model_comparison",
-  unit = "mm"
-)
-
-p_AIC_diff <- df_MLE_result %>%
-  sanitize_model_name() %>%
-  filter(!str_detect(name, "twice")) %>% # filter unrelated data
-  pivot_wider(names_from = params, values_from = value) %>%
-  select(PlayerID, name, AIC) %>%
-  pivot_wider(names_from = name, values_from = AIC) %>%
-  pivot_longer(
-    cols = -c(PlayerID, `full`),
-    names_to = "target", values_to = "AIC"
-  ) %>%
-  mutate(`target - ref` = AIC - `full`) %>%
-  ggplot(aes(x = target %>% reorder(`target - ref`, FUN = mean), y = `target - ref`, group = target)) +
-  gg_box_sina() +
-  geom_hline(yintercept = 0, color = "grey", linetype = "dashed") +
-  theme_fig_anova +
-  theme(axis.text.x = element_text(angle = 30, hjust = 1)) +
-  xlab("") +
-  ylab("target - full model (ΔAIC)")
-
-p_AIC_diff %>% save_svg_figure("p_AIC_diff",
-  analysis_group = "model_comparison",
-  width = fig_AIC_diff_width,
-  height = fig_AIC_height,
-  scaling = fig_anova_scale,
-  unit = "mm"
-)
-
-# post-hoc test if AIC differences are significantly different from 0
-df_p_val_AIC_diff <- df_MLE_result %>%
-  sanitize_model_name() %>%
-  pivot_wider(names_from = params, values_from = value) %>%
-  # filter(number_of_params == 5 & !str_detect(name, pattern="accum")) %>%
-  # filter(!str_detect(name, pattern = "sign_common_b")) %>%
-  # filter(!str_detect(name, pattern = "true_")) %>%
-  filter(!str_detect(name, "twice")) %>% # filter unrelated data
-  mutate(name = gsub("(_estimation|model_|obj_)", "", name) %>% gsub("(lpha|eta|amma)", "", .)) %>% # rename the model names
-  select(PlayerID, name, AIC) %>%
-  pivot_wider(names_from = name, values_from = AIC) %>%
-  pivot_longer(cols = -c(PlayerID, `full`), names_to = "target", values_to = "AIC") %>%
-  mutate(`target - ref` = AIC - `full`) %>%
-  group_by(target) %>%
-  rstatix::wilcox_test(`target - ref` ~ 1, mu = 0, p.adjust.method = "fdr") %>%
-  adjust_pvalue(method = "fdr")
-
-df_AIC_diff_summary <- df_MLE_result %>%
-  sanitize_model_name() %>%
-  pivot_wider(names_from = params, values_from = value) %>%
-  # filter(number_of_params == 5 & !str_detect(name, pattern="accum")) %>%
-  # filter(!str_detect(name, pattern = "sign_common_b")) %>%
-  # filter(!str_detect(name, pattern = "true_")) %>%
-  filter(!str_detect(name, "twice")) %>% # filter unrelated data
-  mutate(name = gsub("(_estimation|model_|obj_)", "", name) %>% # rename the model names
-    gsub("(lpha|eta|amma)", "", .)) %>%
-  select(PlayerID, name, AIC) %>%
-  pivot_wider(names_from = name, values_from = AIC) %>%
-  pivot_longer(cols = -c(PlayerID, `full`), names_to = "target", values_to = "AIC") %>%
-  mutate(`target - ref` = AIC - `full`) %>%
-  group_by(target) %>%
-  summarise(
-    mean_diff = mean(`target - ref`),
-    median_diff = median(`target - ref`),
-    min_diff = min(`target - ref`),
-    max_diff = max(`target - ref`),
-    sd_diff = sd(`target - ref`)
-  )
-
-df_AIC_diff_summary %>%
-  inner_join(df_p_val_AIC_diff, by = "target") %>%
-  select(-c(.y., group1, group2)) %T>% print() %>%
-  export(here::here("results", "AIC_diff_summary.csv"))
 
 # pick up the full model used in main analyses ----
 df_MLE_result_binary <- df_MLE_result %>% filter(name == "binary_sign_Distance_random_estimation")
@@ -634,7 +543,7 @@ p_param_corr %>%
     scale = 0.5
   )
 
-# correlation between weights and threshold ratio (Supplementary Figure 12, 16)----
+# correlation between weights and threshold ratio (Supplementary Figure 16)----
 df_MLE_result_binary %>%
   select(-log_likelihood, -name) %>%
   pivot_wider(names_from = params, values_from = value) %>%
@@ -668,68 +577,6 @@ df_MLE_result_binary %>%
   save_svg_figure(
     "weights_diff_threshold_ratio_fig",
     analysis_group = "parameter_analysis",
-    width = fig_anova_width,
-    height = fig_anova_height,
-    scaling = fig_anova_scale,
-    unit = "mm"
-  )
-
-# correlation between biases and threshold ratio ----
-df_MLE_result_binary %>%
-  select(-log_likelihood, -name) %>%
-  pivot_wider(names_from = params, values_from = value) %>%
-  inner_join(df_rule_hit %>%
-    group_by(PlayerID) %>%
-    summarise(true_threshold = unique(true_threshold)), by = "PlayerID") %>%
-  select(-PlayerID, -number_of_params, -AIC) %>%
-  mutate(threshold_ratio = threshold / true_threshold) %>%
-  lm_robust(formula = b_G - b_B ~ threshold_ratio, data = .) %>%
-  summary() %>%
-  print() %>%
-  sink_analysis("biases_diff_threshold_ratio_lm_robust",
-    analysis_group = "parameter_analysis"
-  )
-
-(df_MLE_result_binary %>%
-  select(-log_likelihood, -name) %>%
-  pivot_wider(names_from = params, values_from = value) %>%
-  inner_join(df_rule_hit %>%
-    group_by(PlayerID) %>%
-    summarise(true_threshold = unique(true_threshold)), by = "PlayerID") %>%
-  select(-PlayerID, -number_of_params, -AIC) %>%
-  mutate(threshold_ratio = threshold / true_threshold) %>%
-  ggplot(aes(x = threshold_ratio, y = b_G - b_B)) +
-  geom_point() +
-  stat_smooth(method = lm_robust) +
-  xlab("threshold ratio") +
-  ylab("biases difference") +
-  theme_fig_base) %>%
-  save_svg_figure(
-    "biases_diff_threshold_ratio_fig",
-    analysis_group = "parameter_analysis",
-    width = fig_anova_width,
-    height = fig_anova_height,
-    scaling = fig_anova_scale,
-    unit = "mm"
-  )
-
-# plot the ratio of trials inside the threshold
-(df_rule_hit %>%
-  group_by(PlayerID) %>%
-  inner_join(df_MLE_result_binary %>%
-    filter(params == "threshold") %>%
-    select(PlayerID, value) %>%
-    rename(threshold = value), by = "PlayerID") %>%
-  mutate(inside_threshold = if_else(Distance < threshold, 1, 0)) %>%
-  summarise(mean_inside_threshold = mean(inside_threshold)) %>%
-  ggplot(aes(x = mean_inside_threshold)) +
-  geom_histogram(binwidth = 0.1) +
-  xlab("ratio of trials inside the threshold") +
-  ylab("number of participants") +
-  theme_fig_base) %>%
-  save_svg_figure(
-    "p_ratio_inside_threshold",
-    analysis_group = "test",
     width = fig_anova_width,
     height = fig_anova_height,
     scaling = fig_anova_scale,

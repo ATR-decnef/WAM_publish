@@ -351,11 +351,7 @@ df_proportion_state_choice_conditional <- df_rule_hit %>%
   mutate(num_of_trials = n()) %>%
   group_by(PlayerID, TrueRule, EstRule) %>%
   summarize(proportion = n() / unique(num_of_trials), .groups = "drop") %>%
-  ungroup() %T>%
-  output_csv(
-    "proportion_state_choice_each_participant",
-    analysis_group = "description"
-  )
+  ungroup()
 
 df_proportion_state_choice_conditional %>%
   group_by(TrueRule, EstRule) %>%
@@ -413,17 +409,6 @@ df_proportion_state_choice_conditional %>%
   )
 
 ## reaction_time (Suppelementary Figure 3A) ------------------------------------------------
-p_hit_location_scatter <- (df_rule_hit %>%
-  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
-  ggplot(aes(x = LocX, LocY, color = TrueRule)) +
-  geom_point() +
-  theme_fig +
-  theme(aspect.ratio = 1) +
-  xlab("X") +
-  ylab("Y") +
-  labs(color = true_rule_name)) %T>%
-  save_svg_figure("hit location scatter plot", scaling = fig_anova_scale, unit = "mm")
-
 p_estimation_RT <- (df_rule_hit %>%
   mutate(
     Correct = if_else(Correct, "correct", "incorrect"),
@@ -518,17 +503,6 @@ df_rule_hit %>%
   )
 
 ## hit location (Supplementary Figure 3B) --------------------------
-
-p_hit_location_scatter_score <- (df_rule_hit %>% mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>% ggplot(aes(x = LocX, LocY, color = DisplayScore)) +
-  geom_point() +
-  theme_fig +
-  theme_fig +
-  theme(aspect.ratio = 1) +
-  xlab("X") +
-  ylab("Y") +
-  labs(color = "score")) %T>% save_svg_figure("hit location scatter plot score", scaling = fig_anova_scale, unit = "mm")
-
-
 p_distance_score <- (df_rule_hit %>%
   mutate(
     Correct = if_else(Correct, "correct", "incorrect"),

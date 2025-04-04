@@ -227,23 +227,6 @@ p_model_switch_conf_15 <-
 p_model_switch_conf_15 %>%
   save_svg_figure("p_distance_model_switch_conf_15", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
-# res %>%
-#   process_for_summary_anova() %>%
-#   do_anova(prev_choice, DisplayScore, pred) %>%
-#   print_anova_sentences()
-# df_rule_hit %>%
-#   process_for_summary_anova() %>%
-#   do_anova(conf_binary, DisplayScore, switch) %>%
-#   print_anova_sentences()
-# df_rule_hit %>%
-#   process_for_summary_anova() %>%
-#   do_anova(prev_conf_binary, DisplayScore, switch) %>%
-#   print_anova_sentences()
-
-# res %>%
-#   process_for_summary_anova() %>%
-#   plot_grouped_summary(prev_choice, pred, DisplayScore)
-
 # plot correlation between confidence and negative entropy (Supplementary Figure 10) ----
 (res %>%
   mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred))) %>%

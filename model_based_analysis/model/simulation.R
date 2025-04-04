@@ -747,30 +747,6 @@ df_est_params <- import(filename) %>%
     select(PlayerID, true_threshold), by = "PlayerID") %>%
   mutate(threshold_ratio = threshold / true_threshold)
 
-# df_est_params_symmetric_model <-
-#   import(here::here("model_based_analysis", "R_result/binary_sign_common_alpha_common_beta_model_obj_Distance_random_estimation.rds")) %>%
-#   as_tibble() %>%
-#   mutate(PlayerID = PlayerID %>% as.factor()) %>%
-#   inner_join(df_rule_hit_performance %>%
-#     select(PlayerID, true_threshold), by = "PlayerID") %>%
-#   mutate(threshold_ratio = threshold / true_threshold)
-
-# input_list <- filename %>%
-#   `[`(str_detect(., pattern = ".*obj.*estimation.rds")) %>%
-#   str_extract(pattern = "(?<=_obj_).*(?=_estimation)") %>%
-#   str_match(pattern = "^.*(?=_)")
-
-# df_sim_with_symmetric_model_actual_parameters <- simulate_model(
-#   df_rule_hit, df_est_params_symmetric_model %>%
-#     select(-c(true_threshold, threshold_ratio)),
-#   binary_sign_common_alpha_common_beta_model_obj, "Distance"
-# )
-# df_sim_with_actual_parameters <- simulate_model(
-#   df_rule_hit, df_est_params %>%
-#     select(-c(true_threshold, threshold_ratio)),
-#   binary_sign_model_obj, "Distance"
-# )
-
 ## modify the paramter and the threshold is now same as the true threshold ====
 df_est_params_true_threshold <-
   df_est_params %>%
@@ -1049,32 +1025,6 @@ df_fig_switch_conf_sim %>% # layout the figures, columns are based on is_true_th
     height = fig_timeseries_height / fig_anova_scale * ceiling(length(.) / 2),
     scaling = 1,
     unit = "mm"
-  )
-
-# plot Z + bias
-df_fig_Z_bias_seq_sim <-
-  df_sim_with_all_parameters %>%
-  mutate( # plot the Z + bias sequence
-    p_model_Z_bias_seq = map(df_sim, ~ (plot_Z_bias_seq(
-      .x %>%
-        unnest(cols = data) %>%
-        mutate(
-          biases = calc_bias(b_G, b_B, DisplayScore),
-          Z_bias = calc_Z_bias_from_p(pred_adj)
-        )
-    ) +
-      labs(title = model_title) +
-      theme(plot.title = element_text(size = 32 / fig_anova_scale))
-    ) %T>%
-      save_svg_figure(paste0("model_sim_", model_name, "_Z_bias_seq_fig"),
-        analysis_group =
-          fs::path(
-            "simulation_with_all_comb_parameters",
-            "Z_bias_seq_fig"
-          ),
-        width = fig_timeseries_width, height = fig_timeseries_height,
-        scaling = fig_anova_scale, unit = "mm"
-      ))
   )
 
 # plot accuracy anova (Supplementary Figure 7) ----

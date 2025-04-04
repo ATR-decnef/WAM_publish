@@ -106,11 +106,6 @@ df_pre_model_state %>%
   sink_analysis(filename = "anova_model_acc_score_truerule", analysis_group = "anova")
 
 df_pre_model_state %>%
-  filter(input == "Distance") %>%
-  lmerTest::lmer(Correct ~ TrueRule * score + (1 | PlayerID), data = .) %T>%
-  output_lme_results("lme_model_accuracy_score_truerule", analysis_group = "lme")
-
-df_pre_model_state %>%
   summarize_performance(score, Correct, TrueRule) %>%
   select(PlayerID, score, TrueRule, mean_Correct) %>%
   posthoc_wilcox_test2(mean_Correct, TrueRule, score) %>%
@@ -123,10 +118,6 @@ df_pre_model_state %>%
   anovakun("sAB", long = TRUE, gg = TRUE) %>%
   sink_analysis(filename = "anova_model_entropy_score_truerule", analysis_group = "anova")
 
-df_pre_model_state %>%
-  filter(input == "Distance") %>%
-  lmerTest::lmer(entropy ~ TrueRule * score + (1 | PlayerID), data = .) %T>%
-  output_lme_results("lme_model_entropy_score_truerule", analysis_group = "lme")
 df_pre_model_state %>%
   filter(input == "Distance") %>%
   group_by(PlayerID) %>%
@@ -221,11 +212,6 @@ df_model_switch_anova %>%
 
 df_model_switch_anova %>%
   filter(input == "Distance") %>%
-  lme4::glmer(is_switch ~ score * prev_output + (1 | PlayerID), data = ., family = binomial) %>%
-  output_lme_results("lme_model_prev_choice_switch", analysis_group = "lme")
-
-df_model_switch_anova %>%
-  filter(input == "Distance") %>%
   summarize_performance(score, is_switch, prev_output) %>%
   select(PlayerID, score, mean_is_switch, prev_output) %>%
   posthoc_wilcox_test2(mean_is_switch, prev_output, score) %>%
@@ -240,11 +226,6 @@ df_model_switch_anova %>%
   replace_na(list(mean_is_switch = 0)) %>%
   anovakun("sAB", long = TRUE, gg = TRUE) %T>% print() %>%
   sink_analysis("anova_distance_model_conf_switch", analysis_group = "anova")
-
-df_model_switch_anova %>%
-  filter(input == "Distance") %>%
-  lme4::glmer(is_switch ~ score * binary_conf + (1 | PlayerID), data = ., family = binomial) %>%
-  output_lme_results("lme_model_conf_switch", analysis_group = "lme")
 
 df_model_switch_anova %>%
   filter(input == "Distance") %>%
@@ -271,54 +252,6 @@ df_behaviour_anova_acc <- df_rule_hit %>%
   )) %>%
   summarize_performance(TrueRule, Correct, score) %>%
   select(PlayerID, score, TrueRule, mean_Correct)
-
-p_model_behaviour_accuracy_score_truerule <-
-  df_model_anova_acc %>%
-  inner_join(
-    df_behaviour_anova_acc,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  ggplot(aes(x = mean_Correct_behaviour, y = mean_Correct_model, color = TrueRule)) +
-  geom_point(
-    aes(
-      shape = score,
-    ),
-    size = 2.5,
-    alpha = 0.8,
-    # key_glyph = draw_key_dotplot,
-  ) +
-  geom_line(
-    aes(
-      group = interaction(score, TrueRule),
-      linetype = score
-    ),
-    stat = "smooth",
-    se = FALSE,
-    method = lm_robust,
-    size = 1.2
-  ) +
-  xlab("p(correct behaviour inference)") +
-  ylab("p(correct model inference)") +
-  theme_fig_base +
-  theme(legend.position = "right") +
-  labs(color = "task state", shape = "score", linetype = "") +
-  scale_shape_manual(values = c(
-    `positive` = 16,
-    `negative` = 21
-  )) +
-  scale_linetype_manual(values = c(
-    `positive` = "solid",
-    `negative` = "dashed"
-  )) +
-  guides(
-    linetype = guide_legend(
-      override.aes = list(
-        shape = c(`positive` = 16, `negative` = 21),
-        linewidth = 0.5
-      )
-    )
-  )
 
 p_model_behaviour_accuracy_score_truerule_facet <- # Supplementary Figure 6
   df_model_anova_acc %>%
@@ -370,73 +303,9 @@ p_model_behaviour_accuracy_score_truerule_facet <- # Supplementary Figure 6
   facet_wrap(. ~ interaction(score, TrueRule)) +
   theme(panel.spacing.x = unit(2, "lines"))
 
-p_model_behaviour_accuracy_score_truerule %>%
-  save_svg_figure("p_model_behaviour_accuracy_score_truerule",
-    scaling = fig_anova_scale, width = fig_anova_width * 1.5, height = fig_anova_height, unit = "mm"
-  )
 p_model_behaviour_accuracy_score_truerule_facet %>%
   save_svg_figure("p_model_behaviour_accuracy_score_truerule_facet",
     scaling = fig_anova_scale, width = fig_anova_width * 1.5, height = fig_anova_height * 1.2, unit = "mm"
-  )
-
-## robust regression for entire data
-reg_model_behaviour_accuracy_score_truerule <-
-  df_model_anova_acc %>%
-  inner_join(
-    df_behaviour_anova_acc,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  lm_robust(mean_Correct_model ~ mean_Correct_behaviour * score * TrueRule, data = .) %>%
-  tidy()
-
-## single robust regression for entire data
-reg_model_behaviour_accuracy_score_truerule_single <-
-  df_model_anova_acc %>%
-  inner_join(
-    df_behaviour_anova_acc,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  lm_robust(mean_Correct_model ~ mean_Correct_behaviour, data = .) %>%
-  tidy()
-
-## robust regression for each group
-reg_model_behaviour_accuracy_score_truerule_group <-
-  df_model_anova_acc %>%
-  inner_join(
-    df_behaviour_anova_acc,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  group_by(score, TrueRule) %>%
-  do({
-    lm_robust(mean_Correct_model ~ mean_Correct_behaviour, data = .) %>%
-      tidy()
-  }) %>%
-  ungroup()
-
-# save regression results
-reg_model_behaviour_accuracy_score_truerule %>%
-  rio::export(
-    here::here(
-      "results",
-      "reg_model_behaviour_accuracy_score_truerule.csv"
-    )
-  )
-reg_model_behaviour_accuracy_score_truerule_single %>%
-  rio::export(
-    here::here(
-      "results",
-      "reg_model_behaviour_accuracy_score_truerule_single.csv"
-    )
-  )
-reg_model_behaviour_accuracy_score_truerule_group %>%
-  rio::export(
-    here::here(
-      "results",
-      "reg_model_behaviour_accuracy_score_truerule_group.csv"
-    )
   )
 
 # spearman correlation for model and behaviour accuracy
@@ -486,57 +355,6 @@ df_behaviour_anova_conf <- df_rule_hit %>%
   )) %>%
   summarize_performance(TrueRule, zConfidence, score) %>%
   select(PlayerID, score, TrueRule, mean_zConfidence)
-
-p_model_behaviour_entropy_score_truerule <-
-  df_model_anova_conf %>%
-  inner_join(
-    df_behaviour_anova_conf,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  ggplot(aes(
-    x = mean_zConfidence, y = mean_z_entropy,
-    color = TrueRule
-  )) +
-  geom_point(
-    aes(
-      shape = score,
-    ),
-    size = 2.5,
-    # key_glyph = draw_key_dotplot,
-  ) +
-  # geom_smooth(method = lm_robust, se = FALSE, size = 1.5) +
-  geom_line(
-    aes(
-      group = interaction(score, TrueRule),
-      linetype = score
-    ),
-    stat = "smooth",
-    se = FALSE,
-    method = lm_robust,
-    size = 1.2
-  ) +
-  xlab("participants' confidence") +
-  ylab("model confidence") +
-  theme_fig_base +
-  theme(legend.position = "right") +
-  labs(color = "task state", shape = "score", linetype = "") +
-  scale_shape_manual(values = c(
-    `positive` = 16,
-    `negative` = 21
-  )) +
-  scale_linetype_manual(values = c(
-    `positive` = "solid",
-    `negative` = "dashed"
-  )) +
-  guides(
-    linetype = guide_legend(
-      override.aes = list(
-        shape = c(`positive` = 16, `negative` = 21),
-        linewidth = 0.5
-      )
-    )
-  )
 
 p_model_behaviour_entropy_score_truerule_facet <- # Supplementary Figure 11
   df_model_anova_conf %>%
@@ -591,72 +409,9 @@ p_model_behaviour_entropy_score_truerule_facet <- # Supplementary Figure 11
   ) +
   facet_wrap(. ~ interaction(score, TrueRule))
 
-p_model_behaviour_entropy_score_truerule %>%
-  save_svg_figure("p_model_behaviour_entropy_score_truerule",
-    scaling = fig_anova_scale, width = fig_anova_width * 1.5, height = fig_anova_height, unit = "mm"
-  )
-
 p_model_behaviour_entropy_score_truerule_facet %>%
   save_svg_figure("p_model_behaviour_entropy_score_truerule_facet",
     scaling = fig_anova_scale, width = fig_anova_width * 1.5, height = fig_anova_height * 1.2, unit = "mm"
-  )
-
-## robust regression for entire data
-reg_model_behaviour_entropy_score_truerule <-
-  df_model_anova_conf %>%
-  inner_join(
-    df_behaviour_anova_conf,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  lm_robust(mean_z_entropy ~ mean_zConfidence * score * TrueRule, data = .) %>%
-  tidy()
-## single robust regression for entire data
-reg_model_behaviour_entropy_score_truerule_single <-
-  df_model_anova_conf %>%
-  inner_join(
-    df_behaviour_anova_conf,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  lm_robust(mean_z_entropy ~ mean_zConfidence, data = .) %>%
-  tidy()
-
-## robust regression for each group
-reg_model_behaviour_entropy_score_truerule_group <-
-  df_model_anova_conf %>%
-  inner_join(
-    df_behaviour_anova_conf,
-    by = c("PlayerID", "score", "TrueRule"),
-    suffix = c("_model", "_behaviour")
-  ) %>%
-  group_by(score, TrueRule) %>%
-  do({
-    lm_robust(mean_z_entropy ~ mean_zConfidence, data = .) %>%
-      tidy()
-  }) %>%
-  ungroup()
-# save regression results
-reg_model_behaviour_entropy_score_truerule %>%
-  rio::export(
-    here::here(
-      "results",
-      "reg_model_behaviour_entropy_score_truerule.csv"
-    )
-  )
-reg_model_behaviour_entropy_score_truerule_single %>%
-  rio::export(
-    here::here(
-      "results",
-      "reg_model_behaviour_entropy_score_truerule_single.csv"
-    )
-  )
-reg_model_behaviour_entropy_score_truerule_group %>%
-  rio::export(
-    here::here(
-      "results",
-      "reg_model_behaviour_entropy_score_truerule_group.csv"
-    )
   )
 
 # spearman correlation for model and behaviour confidence
