@@ -297,6 +297,17 @@ num_of_all_participants <- df_rule_hit_origin %>%
   unique() %>%
   length()
 
+df_rule_hit_origin %>%
+  group_by(PlayerID) %>%
+  summarise(accuracy = mean(Correct)) %>%
+  mutate(is_included = PlayerID %in% included_list) %>%
+  mutate(is_included = if_else(is_included, "included", "excluded")) %>%
+  pivot_wider(names_from = is_included, values_from = accuracy) %>%
+  summarise(accuracy = mean(included, na.rm = TRUE), sd_of_mean = sd(included, na.rm = TRUE), n = n()) %>%
+  rio::export(
+    here::here(fs::path("Figure", "results", "description", "general_accuracy.csv"))
+  )
+
 df_general_count <-
   df_rule_hit_origin %>%
   group_by(PlayerID) %>%
@@ -324,10 +335,88 @@ p_general_acc <- df_rule_hit_origin %>%
   ylab("p(correct state inference)") +
   coord_cartesian(ylim = c(0.48, 0.92))
 
+df_rule_hit_origin %>%
+  group_by(PlayerID) %>%
+  summarise(accuracy = mean(Correct)) %>%
+  mutate(is_included = PlayerID %in% included_list) %>%
+  mutate(is_included = if_else(is_included, "included", "excluded")) %>%
+  filter(is_included == "included") %>%
+  mutate(chance_level = 0.5) %>%
+  coin::wilcoxsign_test(
+    accuracy ~ chance_level,
+    data = .,
+    distribution = "exact",
+    zero.method = "Wilcoxon",
+    alternative = "greater"
+  ) %>%
+  print() %T>%
+  sink_analysis(
+    "wilcox_test_general_accuracy",
+    analysis_group = "description"
+  )
+
+p_general_acc_all <- df_rule_hit_origin %>%
+  group_by(PlayerID) %>%
+  summarise(accuracy = mean(Correct)) %>%
+  mutate(is_included = PlayerID %in% included_list) %>%
+  mutate(is_included = if_else(is_included, "included", "excluded")) %>%
+  ggplot(aes(x = "", y = accuracy)) +
+  geom_boxplot(outlier.shape = NA, na.rm = TRUE, width = 0.4) +
+  geom_sina_fitted(aes(group = 1, shape = is_included), alpha = 1, size = 2.5, maxwidth = 0.4 / 0.75 * 0.5, color = "black") +
+  theme_fig_boxplot +
+  xlab("") +
+  labs(shape = "") +
+  ylab("p(correct state inference)") +
+  coord_cartesian(ylim = c(0.48, 0.92)) +
+  scale_shape_manual(values = c(4, 1))
+
+df_rule_hit_origin %>%
+  group_by(PlayerID) %>%
+  summarise(accuracy = mean(Correct)) %>%
+  mutate(is_included = PlayerID %in% included_list) %>%
+  mutate(is_included = if_else(is_included, "included", "excluded")) %>%
+  mutate(chance_level = 0.5) %>%
+  coin::wilcoxsign_test(
+    accuracy ~ chance_level,
+    data = .,
+    distribution = "exact",
+    zero.method = "Wilcoxon",
+    alternative = "greater"
+  ) %>%
+  print() %T>%
+  sink_analysis(
+    "wilcox_test_general_accuracy_all",
+    analysis_group = "description"
+  )
+
+df_rule_hit_origin %>%
+  group_by(PlayerID) %>%
+  summarise(accuracy_ = mean(Correct)) %>%
+  summarise(accuracy = mean(accuracy_, na.rm = TRUE), sd_of_mean = sd(accuracy_, na.rm = TRUE), n = n()) %>%
+  rio::export(
+    here::here(fs::path("Figure", "results", "description", "general_accuracy_all.csv"))
+  )
+
+p_general_acc_state <- df_rule_hit_origin %>%
+  group_by(PlayerID, TrueRule) %>%
+  summarise(accuracy = mean(Correct)) %>%
+  mutate(is_included = PlayerID %in% included_list) %>%
+  mutate(is_included = if_else(is_included, "included", "excluded")) %>%
+  ggplot(aes(x = TrueRule, y = accuracy, group = TrueRule)) +
+  geom_boxplot(outlier.shape = NA, na.rm = TRUE, width = 0.4) +
+  geom_sina_fitted(alpha = 1, size = 2.5, maxwidth = 0.4 / 0.75 * 0.5, shape = 21, color = "white", fill = "black") +
+  theme_fig_boxplot +
+  xlab("true state") +
+  labs(shape = "") +
+  ylab("p(correct state inference)") +
+  coord_cartesian(ylim = c(0.48, 0.92))
+
 # Figure 1C
 p_general_acc %>%
-  save_svg_figure("general accuracy plot", scaling = fig_anova_scale, width = fig_1box_width, height = fig_1box_height, unit = "mm")
+  save_svg_figure("general accuracy plot", scaling = fig_anova_scale, width = fig_1box_width, height = fig_1box_height, unit = "mm", analysis_group = "description")
 
+p_general_acc_all %>%
+  save_svg_figure("general accuracy all plot", scaling = fig_anova_scale, width = fig_2box_width, height = fig_2box_height, unit = "mm", analysis_group = "description")
 
 ## ----confusion_matrix (Suppelementary Table 1)---------------------------------------------------------
 df_rule_hit %>%
@@ -646,6 +735,47 @@ wilcoxsign_choice_ratio <-
 p_choice_ratio %T>% save_svg_figure("ratio of choice for score",
   scaling = fig_anova_scale, width = fig_2box_width, height = fig_2box_height, unit = "mm"
 )
+
+## corrleation between ratio of score in the skill state and the performance of choice in entire game
+p_accuracy_score_ratio <- df_rule_hit %>%
+  group_by(PlayerID, TrueRule, DisplayScore) %>%
+  summarise(count = n()) %>%
+  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
+  pivot_wider(names_from = DisplayScore, values_from = count) %>%
+  mutate(ratio = positive / (positive + negative)) %>%
+  select(PlayerID, TrueRule, ratio) %>%
+  filter(TrueRule == "skill") %>%
+  inner_join(df_rule_hit_performance, by = "PlayerID") %>%
+  ggplot(aes(x = ratio, y = performance)) +
+  geom_point() +
+  geom_smooth(method = lm_robust, se = FALSE, color = "black") +
+  theme_fig +
+  xlab("ratio of positive score in the skill state") +
+  ylab("performance") +
+  # labs(title = "correlation between ratio of score in the skill state and the performance of choice in entire game") +
+  scale_x_continuous(breaks = seq(0, 1, 0.25), minor_breaks = seq(0, 1, 0.25), expand = expansion(mult = c(0.05, 0.2))) +
+  coord_cartesian(ylim = c(0.4, 0.9)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), minor_breaks = seq(0, 1, 0.25), expand = expansion(mult = c(0.05, 0.2)))
+# stat_cor(method = "pearson", label.y = 0.9, label.x = 0.1, size = 6)
+
+p_accuracy_score_ratio %T>% save_svg_figure("correlation between ratio of score in the skill state and the performance of choice in entire game",
+  scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm"
+)
+
+# calculate correlation with robust lme
+df_accuracy_score_ratio <- df_rule_hit %>%
+  group_by(PlayerID, TrueRule, DisplayScore) %>%
+  summarise(count = n()) %>%
+  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
+  pivot_wider(names_from = DisplayScore, values_from = count) %>%
+  mutate(ratio = positive / (positive + negative)) %>%
+  select(PlayerID, TrueRule, ratio) %>%
+  filter(TrueRule == "skill") %>%
+  inner_join(df_rule_hit_performance, by = "PlayerID")
+
+# Robust regression: performance ~ ratio
+robust_result <- estimatr::lm_robust(performance ~ ratio, data = df_accuracy_score_ratio)
+summary(robust_result)
 
 
 ## example (Figure 1D) ------------------------------------------------------------------
