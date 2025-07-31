@@ -4,7 +4,6 @@ library(ggforce)
 library(rstatix)
 library(svglite)
 
-# result_root <- "Figure/results/"
 result_root_dir <- fs::path("results")
 
 figure_around_switch <-
@@ -580,7 +579,7 @@ sink_output <- function(statement, filename) {
   close(con)
 }
 
-sink_analysis <- function(statement, filename, root_dir = "Figure/results/", analysis_group = "") {
+sink_analysis <- function(statement, filename, root_dir = result_root_dir, analysis_group = "") {
   # add extention if not included
   if (fs::path_ext(filename) == "") {
     filename <- fs::path(filename, ext = "txt")
