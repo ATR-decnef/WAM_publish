@@ -665,6 +665,23 @@ df_rule_hit %>%
   posthoc_wilcox_test(ratio ~ TrueRule) %>%
   output_posthoc_result("posthoc_wilcox_test_ratio_score_true_rule", analysis_group = "ratio_score")
 
+df_rule_hit %>%
+  group_by(PlayerID, TrueRule, DisplayScore) %>%
+  summarise(count = n()) %>%
+  mutate(DisplayScore = numeric_score_to_strings(DisplayScore)) %>%
+  pivot_wider(names_from = DisplayScore, values_from = count) %>%
+  group_by(TrueRule) %>%
+  summarise(
+    mean_positive = mean(positive, na.rm = TRUE),
+    sd_positive = sd(positive, na.rm = TRUE),
+    mean_negative = mean(negative, na.rm = TRUE),
+    sd_negative = sd(negative, na.rm = TRUE),
+    n = mean(positive + negative),
+    sd_n = sd(positive + negative),
+    ratio = mean(positive / (positive + negative)),
+    sd_ratio = sd(positive / (positive + negative))
+  )
+
 # test against chance level
 df_rule_hit %>%
   group_by(PlayerID, TrueRule, DisplayScore) %>%
