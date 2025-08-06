@@ -98,9 +98,9 @@ df_rule_hit_origin <- read_csv(here::here("data/df_rule_hit_switch.csv")) %>%
     DisplayScore = if_else(DisplayScore < 0, 0, DisplayScore)
   )
 df_score_hit <- read_csv(here::here("data/df_score_hit.csv")) %>% mutate(PlayerID = as.factor(PlayerID))
-df_median <- df_score_hit %>% group_by(PlayerID)
-
-
+df_median <- df_score_hit %>%
+  group_by(PlayerID) %>%
+  summarise(threshold = median(Distance))
 ## ----preprocess---------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "CheckCriteria.R"))
 source(here::here("behaviour", "analysis_scripts", "preprocess.R"))
