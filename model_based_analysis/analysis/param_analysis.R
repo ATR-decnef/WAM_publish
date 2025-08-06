@@ -582,6 +582,29 @@ p_param_corr %>%
     scale = 0.5
   )
 
+p_param_corr_threshold_ratio <-
+  df_MLE_result_binary %>%
+  select(-log_likelihood, -name) %>%
+  pivot_wider(names_from = params, values_from = value) %>%
+  inner_join(df_rule_hit %>%
+    group_by(PlayerID) %>%
+    summarise(true_threshold = unique(true_threshold)), by = "PlayerID") %>%
+  mutate(threshold_ratio = threshold / true_threshold) %>%
+  select(-PlayerID, -number_of_params, -AIC, -true_threshold, -threshold) %>%
+  cor(method = corr_method) %>%
+  ggcorrplot(
+    lab = TRUE, type = "lower",
+    legend.title = corr_method,
+    ggtheme = ggplot2::theme_minimal() + theme(axis.title = element_text(), legend.key.height = unit(dev.size()[2] / 8, "inches"))
+  )
+
+p_param_corr_threshold_ratio %>%
+  save_svg_figure("p_param_corr_threshold_ratio",
+    width = fig_anova_width,
+    height = fig_anova_height, units = "mm",
+    scale = 0.5
+  )
+
 # correlation between weights and threshold ratio (Supplementary Figure 16)----
 df_MLE_result_binary %>%
   select(-log_likelihood, -name) %>%
