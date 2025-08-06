@@ -673,13 +673,13 @@ df_rule_hit %>%
   group_by(TrueRule) %>%
   summarise(
     mean_positive = mean(positive, na.rm = TRUE),
-    sd_positive = sd(positive, na.rm = TRUE),
     mean_negative = mean(negative, na.rm = TRUE),
-    sd_negative = sd(negative, na.rm = TRUE),
     n = mean(positive + negative),
     sd_n = sd(positive + negative),
     ratio = mean(positive / (positive + negative)),
-    sd_ratio = sd(positive / (positive + negative))
+    sd_ratio = sd(positive / (positive + negative)),
+    med_ratio = median(positive / (positive + negative)),
+    sd_med_ratio = sd(median(positive / (positive + negative)))
   )
 
 # test against chance level
