@@ -1544,3 +1544,332 @@ source(here::here("behaviour", "analysis_scripts", "meta_d_rule.R"))
 
 ## Supplementary Figure 13D -----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "confidence_and_performances.R"))
+
+# calculate performance in practice
+# load the practice data
+df_practice <- rio::import(here::here("data", "df_practice.csv")) %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    TrueRule = factor(TrueRule, levels = c("skill", "random")),
+    PlayerID = as.factor(PlayerID)
+  )
+
+# confirm the number of trials is 80 and the number of players is 66
+# num of rows should be 80 * 66 = 5280
+nrow(df_practice) == 5280
+
+# unique trialID should be 80
+length(unique(df_practice$TrialID)) == 80
+
+# number of players should be 66
+length(unique(df_practice$PlayerID)) == 66
+
+# calculate the performance in practice
+df_practice_performance <- df_practice %>%
+  group_by(PlayerID) %>%
+  mutate(
+    Correct = if_else(EstRule == TrueRule, 1, 0)
+  ) %>%
+  summarise(
+    performance = mean(Correct)
+  ) %>%
+  ungroup() %>%
+  mutate(is_included = PlayerID %in% included_list)
+
+p_accuracy_practice <- df_practice_performance %>%
+  ggplot(aes(x = "", y = performance)) +
+  geom_boxplot(outlier.shape = NA, na.rm = TRUE, width = 0.4) +
+  geom_sina_fitted(aes(group = 1, shape = is_included), alpha = 1, size = 2.5, maxwidth = 0.4 / 0.75 * 0.5, color = "black") +
+  theme_fig_boxplot +
+  xlab("") +
+  labs(shape = "") +
+  ylab("p(correct state inference) in practice") +
+  scale_shape_manual(values = c(4, 1))
+
+p_accuracy_practice %>% save_svg_figure("p_accuracy_practice", analysis_group = "practice_performance", scaling = fig_anova_scale, width = fig_1box_width, height = fig_1box_height, unit = "mm")
+
+df_performance_practice_main <-
+  df_practice_performance %>%
+  inner_join(
+    df_rule_hit_performance %>%
+      select(PlayerID, performance),
+    by = "PlayerID",
+    suffix = c("_practice", "_main")
+  )
+
+p_accuracy_practice_main <-
+  df_performance_practice_main %>%
+  select(PlayerID, performance_practice, performance_main, is_included) %>%
+  ggplot(
+    aes(x = performance_practice, y = performance_main)
+  ) +
+  geom_point(size = 2.5, color = "black", alpha = 0.8) +
+  geom_smooth(method = lm_robust, color = "black", se = FALSE) +
+  theme_fig +
+  xlab("p(correct state inference) in practice") +
+  ylab("p(correct state inference) in main task")
+
+p_accuracy_practice_main %>% save_svg_figure("p_accuracy_practice_main", analysis_group = "practice_performance", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
+
+# calculate the robust regression
+df_performance_practice_main %>%
+  lm_robust(performance_practice ~ performance_practice, data = .) %>%
+  summary()
+
+# calculate the correlation
+cor.test(
+  df_performance_practice_main$performance_practice,
+  df_performance_practice_main$performance_main,
+  method = "pearson"
+)
+
+cor.test(
+  df_performance_practice_main$performance_practice,
+  df_performance_practice_main$performance_main,
+  method = "spearman"
+)
+
+df_choice_main_practice <- df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill"),
+    choice_random = mean(EstRule == "random"),
+  ) %>%
+  ungroup() %>%
+  inner_join(
+    df_practice_performance %>%
+      select(PlayerID, performance),
+    by = "PlayerID"
+  )
+
+p_choice_in_main_performance_in_practice <-
+  df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill")
+  ) %>%
+  ungroup() %>%
+  pivot_wider(names_from = DisplayScore, values_from = choice_skill) %>%
+  mutate(
+    bias = `positive` - `negative`
+  ) %>%
+  inner_join(
+    df_practice_performance %>%
+      select(PlayerID, performance),
+    by = "PlayerID"
+  ) %>%
+  ggplot(aes(x = performance, y = bias)) +
+  geom_point(size = 2.5, alpha = 0.8) +
+  geom_smooth(method = lm_robust, se = FALSE) +
+  theme_fig +
+  xlab("p(correct state inference) in practice") +
+  ylab("p(c = skill | positive ) - p(c = skill | negative)")
+
+p_choice_in_main_performance_in_practice %>% save_svg_figure("p_choice_in_main_performance_in_practice", analysis_group = "practice_performance", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
+
+# do robust regression
+# df_choice_main_practice %>%
+#   lm_robust(choice_skill ~ performance * DisplayScore, data = .) %>%
+#   summary()
+df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill")
+  ) %>%
+  ungroup() %>%
+  pivot_wider(names_from = DisplayScore, values_from = choice_skill) %>%
+  mutate(
+    bias = `positive` - `negative`
+  ) %>%
+  inner_join(
+    df_practice_performance %>%
+      select(PlayerID, performance),
+    by = "PlayerID"
+  ) %>%
+  lm_robust(bias ~ performance, data = .) %>%
+  summary()
+
+df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill")
+  ) %>%
+  ungroup() %>%
+  pivot_wider(names_from = DisplayScore, values_from = choice_skill) %>%
+  mutate(
+    bias = `positive` - `negative`
+  ) %>%
+  inner_join(
+    df_rule_hit_performance %>%
+      select(PlayerID, performance),
+    by = "PlayerID"
+  ) %>%
+  lm_robust(bias ~ performance, data = .) %>%
+  summary()
+
+df_choice_performance_main <- df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill"),
+    choice_random = mean(EstRule == "random"),
+  ) %>%
+  ungroup() %>%
+  inner_join(
+    df_rule_hit_performance %>%
+      select(PlayerID, performance),
+    by = "PlayerID"
+  )
+
+p_choice_in_main_performance_in_main <-
+  df_choice_performance_main %>%
+  ggplot(aes(x = performance, y = choice_skill, color = DisplayScore)) +
+  geom_point(size = 2.5, alpha = 0.8) +
+  geom_smooth(method = lm_robust, se = FALSE) +
+  theme_fig +
+  xlab("p(correct state inference) in main task") +
+  ylab("p(choice skill in main task)")
+
+p_choice_in_main_performance_in_main %>% save_svg_figure("p_choice_in_main_performance_in_main", analysis_group = "practice_performance", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
+
+
+df_ratio_of_score_practice <- df_practice %>%
+  group_by(PlayerID) %>%
+  summarise(
+    num_trial = n(),
+    num_positive = sum(DisplayScore),
+    ratio_positive = num_positive / num_trial,
+  ) %>%
+  ungroup() %>%
+  mutate(is_included = PlayerID %in% included_list)
+
+df_choice_in_main_score_in_practice <-
+  df_choice_main_practice %>%
+  select(PlayerID, DisplayScore, choice_skill) %>%
+  inner_join(
+    df_ratio_of_score_practice %>%
+      select(PlayerID, ratio_positive),
+    by = "PlayerID"
+  )
+
+p_choice_in_main_score_in_practice <-
+  df_choice_in_main_score_in_practice %>%
+  ggplot(aes(x = ratio_positive, y = choice_skill, color = DisplayScore)) +
+  geom_point(size = 2.5, alpha = 0.8) +
+  geom_smooth(method = lm_robust, se = FALSE) +
+  theme_fig +
+  xlab("ratio of positive score in practice") +
+  ylab("p(choice skill in main task)")
+
+p_choice_in_main_score_in_practice %>% save_svg_figure("p_choice_in_main_score_in_practice", analysis_group = "practice_performance", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
+
+# calculate the robust regression (bias ~ ratio of positive score in practice)
+df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill")
+  ) %>%
+  ungroup() %>%
+  pivot_wider(names_from = DisplayScore, values_from = choice_skill) %>%
+  mutate(
+    bias = `positive` - `negative`
+  ) %>%
+  inner_join(
+    df_ratio_of_score_practice %>%
+      select(PlayerID, ratio_positive),
+    by = "PlayerID"
+  ) %>%
+  lm_robust(bias ~ ratio_positive, data = .) %>%
+  summary()
+
+# calculate the robust regression (bias ~ ratio of positive score in main task)
+df_rule_hit %>%
+  mutate(
+    EstRule = factor(EstRule, levels = c("skill", "random")),
+    DisplayScore = numeric_score_to_strings(DisplayScore) %>% as.factor()
+  ) %>%
+  group_by(PlayerID, DisplayScore) %>%
+  summarise(
+    choice_skill = mean(EstRule == "skill")
+  ) %>%
+  ungroup() %>%
+  pivot_wider(names_from = DisplayScore, values_from = choice_skill) %>%
+  mutate(
+    bias = `positive` - `negative`
+  ) %>%
+  inner_join(
+    df_rule_hit %>%
+      group_by(PlayerID) %>%
+      summarise(
+        num_trial = n(),
+        num_positive = sum(DisplayScore),
+        ratio_positive = num_positive / num_trial,
+      ) %>%
+      ungroup() %>%
+      mutate(is_included = PlayerID %in% included_list),
+    by = "PlayerID"
+  ) %>%
+  lm_robust(bias ~ ratio_positive, data = .) %>%
+  summary()
+
+df_MLE_binary_performance <-
+  rio::import(
+    fs::path(
+      "results",
+      "binary_sign_Distance_random_estimation_parameters",
+      ext = "csv"
+    )
+  ) %>%
+  mutate(
+    PlayerID = as.factor(PlayerID)
+  ) %>%
+  inner_join(
+    df_rule_hit_performance %>%
+      select(PlayerID, performance, true_threshold) %>%
+      mutate(
+        PlayerID = as.factor(PlayerID)
+      ),
+    by = "PlayerID"
+  ) %>%
+  mutate(threshold_ratio = threshold / true_threshold) %>%
+  inner_join(
+    df_practice_performance %>%
+      mutate(
+        PlayerID = as.factor(PlayerID)
+      ),
+    by = "PlayerID",
+    suffix = c("", "_practice")
+  )
+p_MLE_binary_performance <-
+  df_MLE_binary_performance %>%
+  ggplot(aes(x = performance_practice, y = threshold_ratio)) +
+  geom_point(size = 2.5, alpha = 0.8) +
+  geom_smooth(method = lm_robust, se = FALSE) +
+  theme_fig +
+  ylab("threshold / true threshold") +
+  xlab("p(correct state inference) in practice")
+
+p_MLE_binary_performance %>% save_svg_figure("p_MLE_binary_performance", analysis_group = "MLE_binary_performance", scaling = fig_anova_scale, width = fig_anova_width, height = fig_anova_height, unit = "mm")
