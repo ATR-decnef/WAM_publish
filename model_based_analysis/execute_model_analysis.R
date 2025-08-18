@@ -8,7 +8,7 @@ source(here::here("model_based_analysis", "analysis", "anova_kun.R"))
 # Run model fitting (simulation with pararell computation will be executed)
 source(here::here("model_based_analysis", "analysis", "MLE.R"))
 
-# parameter analysis (Supplementary Table 2, Figure 2C, D, Supplementary Figure 5, 16)
+# parameter analysis (Supplementary Table 2, Figure 2C, D, Supplementary Figure 5, 17)
 source(here::here("model_based_analysis", "analysis", "param_analysis.R"))
 print("param_analysis.R is done")
 
@@ -29,7 +29,7 @@ source(here::here("model_based_analysis", "analysis", "Visualize_correlation.R")
 print("Visualize_correlation.R is done")
 
 # simulation with modified parameters (simulation with pararell computation will be executed)
-# (Supplementary Figure 7, 12, 15, 16) 7, 10, 13, 16,
+# (Supplementary Figure 7, 10, 13, 16)
 source(here::here("model_based_analysis", "model", "simulation.R"))
 print("simulation.R is done")
 
@@ -40,3 +40,6 @@ print("MLE_simulation.R is done")
 # plot relation between prediction error in the score prediction task and true theta in the main task (Supplementary Figure 18)
 source(here::here("model_based_analysis", "analysis", "score_prediction_theta_analysis.R"))
 print("score_prediction_theta_analysis.R is done")
+
+# plot relation between subjective distance and z-scored confidence (Figure 4C)
+source(here::here("model_based_analysis", "analysis", "confidence_distance_relation.R"))

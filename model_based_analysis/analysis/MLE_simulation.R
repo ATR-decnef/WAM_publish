@@ -124,7 +124,7 @@ est_results <-
     )
   )
 
-# モデル順序を事前指定（plot用名称に合わせて修正）
+# specify the order of models for plotting
 model_order <- c(
   "full",
   "common constant term",
@@ -134,13 +134,15 @@ model_order <- c(
   "no accumulation"
 )
 
-# 各simulationごとにAIC最小のモデルを抽出
+# extract the model with the minimum AIC for each simulation
 min_aic_points <- est_results %>%
   group_by(simulation, name) %>%
   summarise(AIC = mean(AIC, na.rm = TRUE)) %>%
   group_by(simulation) %>%
   filter(AIC == min(AIC, na.rm = TRUE)) %>%
   ungroup()
+
+# Supplementary Figure 9
 p_AIC_boxplot_across_models_for_simulated <- est_results %>%
   ggplot(aes(x = AIC, y = factor(name, levels = model_order), group = name, fill = name)) +
   stat_summary(
