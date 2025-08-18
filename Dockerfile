@@ -1,4 +1,4 @@
-FROM rocker/verse:latest
+FROM rocker/verse:4.3.3
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get -y upgrade \
   && apt-get install -y \
