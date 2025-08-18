@@ -64,7 +64,7 @@ sanitize_model_name <- function(df) {
 }
 
 # load fitted data ====
-file_lists <- list.files(here::here("model_based_analysis", "R_result/"), pattern = "binary_sign_.*Distance.*estimation.rds", full.names = TRUE)
+file_lists <- list.files(here::here("model_based_analysis", "R_result_original/"), pattern = "binary_sign_.*Distance.*estimation.rds", full.names = TRUE)
 df_MLE_result <- foreach(file = file_lists, .combine = rbind) %do%
   {
     print(file)
@@ -605,7 +605,7 @@ p_param_corr_threshold_ratio %>%
     scale = 0.5
   )
 
-# correlation between weights and threshold ratio (Supplementary Figure 16)----
+# correlation between weights and threshold ratio (Supplementary Figure 17)----
 df_MLE_result_binary %>%
   select(-log_likelihood, -name) %>%
   pivot_wider(names_from = params, values_from = value) %>%

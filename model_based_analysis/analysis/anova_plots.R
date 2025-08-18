@@ -339,7 +339,7 @@ corr_model_behaviour_accuracy_score_truerule_group %>%
   )
 
 
-# plot the relationship between model and behaviour confidence (Supplementary Figure 11) ----
+# plot the relationship between model and behaviour confidence (Supplementary Figure 12) ----
 df_model_anova_conf <- df_pre_model_state %>%
   filter(input %in% input_list) %>%
   ungroup() %>%
@@ -356,7 +356,7 @@ df_behaviour_anova_conf <- df_rule_hit %>%
   summarize_performance(TrueRule, zConfidence, score) %>%
   select(PlayerID, score, TrueRule, mean_zConfidence)
 
-p_model_behaviour_entropy_score_truerule_facet <- # Supplementary Figure 11
+p_model_behaviour_entropy_score_truerule_facet <- # Supplementary Figure 12
   df_model_anova_conf %>%
   inner_join(
     df_behaviour_anova_conf,

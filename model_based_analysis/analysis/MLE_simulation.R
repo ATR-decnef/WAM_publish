@@ -160,34 +160,6 @@ p_AIC_boxplot_across_models_for_simulated <- est_results %>%
     ),
     size = 5
   ) +
-  # scale_color_identity() +
-  # 各simulationごとにAIC最小のモデルに赤い矢印を描画
-  # geom_segment(
-  #   data = min_aic_points,
-  #   aes(
-  #     x = AIC + 110, xend = AIC + 80,
-  #     y = factor(name, levels = model_order),
-  #     yend = factor(name, levels = model_order)
-  #   ),
-  #   arrow = arrow(length = unit(0.25, "cm")),
-  #   color = "red",
-  #   linewidth = 1.2,
-  #   inherit.aes = FALSE
-  # ) +
-  # 各facet内でsimulationモデルと他モデルの比較を自動で作るのは難しいため、ここはコメントアウト例
-  # geom_signif(
-  #   comparisons = split(
-  #     lapply(model_order[-1], function(other) c("full", other)),
-  #     seq_along(model_order[-1])
-  #   ),
-  #   test = "wilcox.test",
-  #   test.args = list(paired = TRUE, exact = TRUE),
-  #   map_signif_level = TRUE, color = "black",
-  #   alpha = 1, textsize = 6,
-  #   vjust = 0.5,
-  #   step_increase = 0.1,
-  #   y_position = 520
-  # ) +
   theme_fig_base +
   theme(aspect.ratio = 1 / 1.414, legend.position = "none") +
   # scale_y_discrete(

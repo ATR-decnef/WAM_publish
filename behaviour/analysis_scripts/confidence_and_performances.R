@@ -37,7 +37,7 @@ p_number_of_trials_score_rule_correct %>%
         unit = "mm"
     )
 
-p_confidence_score_rule_correct <- # Supplementary figure 13D
+p_confidence_score_rule_correct <- # Supplementary figure 14D
     df_rule_hit %>%
     group_by(PlayerID, TrueRule, DisplayScore, Correct) %>%
     mutate(

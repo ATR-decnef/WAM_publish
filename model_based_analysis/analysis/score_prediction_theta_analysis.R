@@ -56,7 +56,7 @@ p_theta_pred_error %>%
 # robust regressionの結果を表示
 summary(lm_robust(pred_error ~ threshold_ratio, data = df_merged))
 
-# correlation between prediction error and true theta
+# correlation between prediction error and true theta (Supplementary Figure 18)
 p_theta_true_pred_error <- df_merged %>%
     ggplot(aes(x = true_threshold, y = pred_error)) +
     geom_point(alpha = 0.6) +

@@ -956,7 +956,7 @@ df_hebaviour_confidence_summary <-
     q3 = quantile(confidence, 0.75)
   )
 
-# plot accuracy (Supplementary Figure 9) ----
+# plot accuracy (Supplementary Figure 10) ----
 df_fig_switch_acc_sim <-
   df_sim_with_all_parameters %>%
   mutate( # plot the accuracy sequence
@@ -992,7 +992,7 @@ df_fig_switch_acc_sim %>% # layout the figures, columns are based on is_true_the
     unit = "mm"
   )
 
-# plot entropy (Supplementary Figure 15) ----
+# plot entropy (Supplementary Figure 16) ----
 df_fig_switch_conf_sim <-
   df_sim_with_all_parameters %>%
   mutate( # plot the entropy sequence
@@ -1113,7 +1113,7 @@ df_sim_with_all_parameters %>%
     })
   )
 
-# plot entropy anova (Supplementary Figure 12) ----
+# plot entropy anova (Supplementary Figure 13) ----
 df_fig_anova_entropy_score_true_rule_sim <-
   df_sim_with_all_parameters %>%
   mutate( # plot the entropy anova

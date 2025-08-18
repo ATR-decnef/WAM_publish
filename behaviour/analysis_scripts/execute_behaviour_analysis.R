@@ -1023,7 +1023,7 @@ p_switch_conf <- df_rule_hit %>%
 # Figure 5C
 p_switch_conf %T>% save_svg_figure("p_switch_conf", analysis_group = "time_series", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
-## Supplementary Figure 14A ----
+## Supplementary Figure 15A ----
 p_switch_conf_15 <- df_rule_hit %>%
   pivot_longer(cols = c(TrialsAfterSwitchToSkill, TrialsAfterSwitchToRandom), names_to = "switch", values_to = "num of trials") %>%
   group_by(PlayerID, switch, `num of trials`) %>%
@@ -1538,11 +1538,11 @@ df_distance %>%
     analysis_group = "distance_diff_next"
   )
 
-## Supplementary Figure 13A, B, C-----------------------------------------------------------------------------
+## Supplementary Figure 14A, B, C-----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "meta_d_rule.R"))
 
 
-## Supplementary Figure 13D -----------------------------------------------------------------------------
+## Supplementary Figure 14D -----------------------------------------------------------------------------
 source(here::here("behaviour", "analysis_scripts", "confidence_and_performances.R"))
 
 # calculate performance in practice
