@@ -1152,7 +1152,7 @@ df_per_score_test_against_chance <- df_rule_hit_for_test %>%
   group_by(PlayerID, DisplayScore) %>%
   summarise(accuracy = mean(Correct)) %>%
   mutate(chance_level = 0.5) %>%
-  group_by(DisplayScore) %>% # DisplayScoreでグループ化
+  group_by(DisplayScore) %>%
   rstatix::wilcox_test(accuracy ~ 1, mu = 0.5, alternative = "greater", exact = TRUE) %>% # Wilcoxon符号順位検定
   adjust_pvalue(method = "fdr") %>%
   add_significance(p.col = "p.adj")

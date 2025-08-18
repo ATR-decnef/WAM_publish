@@ -28,7 +28,7 @@ convert_label <- function(label) {
   label <- str_replace(label, "_G$", "\\[~pos\\]")
   label <- str_replace(label, "_B$", "\\[~neg\\]")
 
-  # expressionに変換するための文字列を作成
+  # create a string to convert to expression
   # parsed_label <- sapply(label, function(.x) parse(text = .x))
   parsed_label <- label
   print(parsed_label)

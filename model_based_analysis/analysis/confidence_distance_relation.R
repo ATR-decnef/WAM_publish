@@ -41,7 +41,7 @@ p_conf_subjective_distance %>% save_svg_figure("subjective_distance_vs_zscored_c
     width = fig_anova_width, height = fig_anova_height, scaling = fig_anova_scale, unit = "mm"
 )
 
-# PlayerIDごとに主観的thresholdとzスコア化confidenceの平均を紐付けてプロット
+# Plot mean z-scored confidence for each PlayerID against subjective threshold
 df_subjective_threshold <- df_MLE_result_binary %>%
     select(PlayerID, threshold)
 

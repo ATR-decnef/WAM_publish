@@ -1,20 +1,19 @@
-# 必要なパッケージ
 library(tidyverse)
 library(here)
 library(ggthemes)
 
-# 1. パラメータ推定値の読み込み（例: binary_sign_model_obj_Distance_random_estimation.rds）
+# 1. Load parameter estimates
 param_file <- here("model_based_analysis", "R_result", "binary_sign_model_obj_Distance_random_estimation.rds")
 param_df <- rio::import(param_file) %>%
     as_tibble() %>%
     mutate(PlayerID = as.factor(PlayerID))
 
-# 2. df_score_hitの読み込み
+# 2. Load df_score_hit
 score_file <- here("data", "df_score_hit.csv")
 df_score_hit <- read_csv(score_file) %>%
     mutate(PlayerID = as.factor(PlayerID))
 
-# 3. prediction errorの計算
+# 3. Calculate prediction error
 df_score_hit_summary <- df_score_hit %>%
     mutate(pred_error = EstScore - TrueScore) %>%
     group_by(PlayerID) %>%
@@ -30,14 +29,14 @@ df_score_hit_summary <- df_score_hit %>%
         by = "PlayerID"
     )
 
-# 4. thetaパラメータをマージ
+# 4. Merge theta parameters
 df_merged <- df_score_hit_summary %>%
     left_join(param_df %>% select(PlayerID, theta = threshold), by = "PlayerID") %>%
     mutate(
         threshold_ratio = theta / true_threshold
     )
 
-# 5. 相関プロット
+# 5. Correlation plot
 p_theta_pred_error <- df_merged %>%
     ggplot(aes(x = threshold_ratio, y = pred_error)) +
     geom_point(alpha = 0.6) +
@@ -53,7 +52,7 @@ p_theta_pred_error %>%
         width = fig_anova_width, height = fig_anova_height, scaling = fig_anova_scale, unit = "mm", analysis_group = "score_prediction_and_theta"
     )
 
-# robust regressionの結果を表示
+# Show the result of robust regression
 summary(lm_robust(pred_error ~ threshold_ratio, data = df_merged))
 
 # correlation between prediction error and true theta (Supplementary Figure 18)
