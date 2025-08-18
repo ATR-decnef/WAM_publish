@@ -12,7 +12,7 @@ source(here::here("model_based_analysis", "analysis", "MLE.R"))
 source(here::here("model_based_analysis", "analysis", "param_analysis.R"))
 print("param_analysis.R is done")
 
-# time series analysis (Figure 3B, C, Supplementary Figure 11, 15B)
+# time series analysis (Figure 3B, 5D, Supplementary Figure 11, 15B)
 source(here::here("model_based_analysis", "analysis", "temporal_analysis.R"))
 print("temporal_analysis.R is done")
 

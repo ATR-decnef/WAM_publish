@@ -1348,7 +1348,7 @@ df_rule_hit_for_test %>%
   summary() # almost same result as anova-kun
 
 
-## Figure 3D -------------------------------------------------------------------
+## Figure 3C -------------------------------------------------------------------
 p_switch_prev_choice_score <-
   df_rule_hit %>%
   process_for_summary_anova() %>%
