@@ -418,7 +418,7 @@ p_general_acc %>%
 p_general_acc_all %>%
   save_svg_figure("general accuracy all plot", scaling = fig_anova_scale, width = fig_2box_width, height = fig_2box_height, unit = "mm", analysis_group = "description")
 
-## ----confusion_matrix (Suppelementary Table 1)---------------------------------------------------------
+## ----confusion_matrix (Supplementary Table 1)---------------------------------------------------------
 df_rule_hit %>%
   mutate(`task state` = TrueRule, `choice` = EstRule) %>%
   xtabs(~ `choice` + `task state`, data = .) / (560 * 51)
@@ -497,7 +497,7 @@ df_proportion_state_choice_conditional %>%
     analysis_group = "description"
   )
 
-## reaction_time (Suppelementary Figure 3A) ------------------------------------------------
+## reaction_time (Supplementary Figure 3A) ------------------------------------------------
 p_estimation_RT <- (df_rule_hit %>%
   mutate(
     Correct = if_else(Correct, "correct", "incorrect"),
@@ -540,7 +540,7 @@ p_distance_true <- (df_rule_hit %>%
     scaling = fig_anova_scale, unit = "mm"
   )
 
-## distance true rule (Suppelementary Figure 4A) ------------------------------------------------
+## distance true rule (Supplementary Figure 4A) ------------------------------------------------
 p_distance_true_box <-
   (
     df_rule_hit %>%

@@ -105,7 +105,7 @@ df_rule_hit_meta_d_true_rule_performance <-
     unnest(cols = c(skill, random)) %>%
     inner_join(df_rule_hit_performance)
 
-# Suppelementary Figure 14A
+# Supplementary Figure 14A
 (df_rule_hit_meta_d_true_rule_performance %>%
     pivot_longer(names_to = "TrueRule", values_to = "output", cols = c(skill, random)) %>%
     ggplot(aes(x = TrueRule, y = output, group = TrueRule, color = TrueRule, alpha = TrueRule)) +

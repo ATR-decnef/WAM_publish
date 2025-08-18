@@ -1,5 +1,5 @@
 # relation between subjective distance and z-scored confidence
-# Figure 4c
+# Figure 4C
 p_conf_subjective_distance <- df_rule_hit %>%
     select(-threshold) %>%
     select(PlayerID, TrialID, Distance, normalizedDistance, zConfidence) %>%
