@@ -250,6 +250,11 @@ plot_summarized_performance <- function(data, x_factor, y_factor, group_factor, 
 
 
 save_svg_figure <- function(plot, figure_name, result_root = result_root_dir, analysis_group = "", ...) {
+  # create directory if not exist
+  if (!fs::dir_exists(fs::path(result_root, analysis_group))) {
+    fs::dir_create(fs::path(result_root, analysis_group))
+  }
+
   ggsave(
     filename =
       fs::path(
@@ -257,7 +262,9 @@ save_svg_figure <- function(plot, figure_name, result_root = result_root_dir, an
         ext = "svg"
       ) %>% here::here(),
     plot = plot,
-    device = "svg", ...
+    device = "svg",
+    create.dir = TRUE,
+    ...
   )
   ggsave(
     filename =
@@ -266,7 +273,9 @@ save_svg_figure <- function(plot, figure_name, result_root = result_root_dir, an
         ext = "png"
       ) %>% here::here(),
     plot = plot,
-    device = "png", ...
+    device = "png",
+    create.dir = TRUE,
+    ...
   )
 }
 
