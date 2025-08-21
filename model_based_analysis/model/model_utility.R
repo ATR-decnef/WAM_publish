@@ -23,7 +23,8 @@ step <- function(x) {
 }
 
 fit_all_participants <- function(df_rule_hit, model_obj, input_col, output_rule) {
-  est_result <- foreach(p_ = df_rule_hit$PlayerID %>% unique(), .combine = rbind, .packages = c("foreach", "doParallel", "tidyverse")) %dopar% {
+  # est_result <- foreach(p_ = df_rule_hit$PlayerID %>% unique(), .combine = rbind, .packages = c("foreach", "doParallel", "tidyverse")) %dopar% {
+  est_result <- foreach(p_ = df_rule_hit$PlayerID %>% unique(), .combine = rbind, .packages = c("foreach", "doParallel", "tidyverse")) %do% {
     source(here::here("model_based_analysis", "model/model_definition.R"))
 
     # print(paste0("IDa:", p_))
@@ -56,11 +57,15 @@ fit_all_participants <- function(df_rule_hit, model_obj, input_col, output_rule)
   est_result
 }
 
-estimate_model <- function(df, model_obj, model_name, input_col, output_rule) {
+estimate_model <- function(df, model_obj, model_name, input_col, output_rule, suffix = "") {
   # model_name = rlang::expr_text(rlang::enexpr(model_obj))
   print(model_name)
 
-  est_result_filename <- sprintf("R_result/%s_%s_%s", model_name, input_col, output_rule)
+  if (nzchar(suffix)) {
+    suffix <- paste0("_", suffix)
+  }
+
+  est_result_filename <- sprintf("R_result/%s_%s_%s%s", model_name, input_col, output_rule, suffix)
 
   est_result <- fit_all_participants(df, model_obj, input_col, output_rule)
   export(est_result, here::here("model_based_analysis", sprintf("%s_estimation.rds", est_result_filename)))

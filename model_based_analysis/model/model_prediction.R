@@ -88,12 +88,23 @@ predict_from_file <- function(df_rule_hit, estimation_filename, input_list) {
     as_tibble() %>%
     mutate(PlayerID = PlayerID %>% as.factor())
 
+  # print(head(df_estimation))
+
   if (!("threshold" %in% (df_estimation %>% colnames()))) {
+    # print("true_threshold not found in estimation file, adding from df_rule_hit")
     # browser()
     df_estimation <- df_estimation %>%
-      inner_join(df_rule_hit %>% select(PlayerID, true_threshold), by = "PlayerID") %>%
+      inner_join(
+        df_rule_hit %>%
+          select(PlayerID, true_threshold) %>%
+          group_by(PlayerID) %>%
+          summarise(true_threshold = unique(true_threshold), .groups = "drop"),
+        by = "PlayerID"
+      ) %>%
       mutate(threshold = true_threshold) %>%
       select(-true_threshold)
+
+    # print(head(df_estimation %>% select(PlayerID, threshold)))
   }
   print(rule_dir)
   print(input)

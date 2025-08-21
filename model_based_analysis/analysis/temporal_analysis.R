@@ -177,7 +177,7 @@ p_model_switch_conf <-
 p_model_switch_conf %>%
   save_svg_figure("p_distance_model_switch_conf", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
-## Supplementary Figure 14B
+## Supplementary Figure 15B
 p_model_switch_conf_15 <-
   res %>%
   mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred)), behaviour = zConfidence) %>%
@@ -227,7 +227,7 @@ p_model_switch_conf_15 <-
 p_model_switch_conf_15 %>%
   save_svg_figure("p_distance_model_switch_conf_15", scaling = fig_anova_scale, width = fig_timeseries_width, height = fig_timeseries_height, unit = "mm")
 
-# plot correlation between confidence and negative entropy (Supplementary Figure 10) ----
+# plot correlation between confidence and negative entropy (Supplementary Figure 11) ----
 (res %>%
   mutate(entropy = (pred * log(pred) + (1 - pred) * log(1 - pred))) %>%
   group_by(PlayerID, input) %>%

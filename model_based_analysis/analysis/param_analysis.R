@@ -28,7 +28,7 @@ convert_label <- function(label) {
   label <- str_replace(label, "_G$", "\\[~pos\\]")
   label <- str_replace(label, "_B$", "\\[~neg\\]")
 
-  # expressionに変換するための文字列を作成
+  # create a string to convert to expression
   # parsed_label <- sapply(label, function(.x) parse(text = .x))
   parsed_label <- label
   print(parsed_label)
@@ -64,7 +64,7 @@ sanitize_model_name <- function(df) {
 }
 
 # load fitted data ====
-file_lists <- list.files(here::here("model_based_analysis", "R_result/"), pattern = "binary_sign_.*Distance.*estimation.rds", full.names = TRUE)
+file_lists <- list.files(here::here("model_based_analysis", "R_result_original/"), pattern = "binary_sign_.*Distance.*estimation.rds", full.names = TRUE)
 df_MLE_result <- foreach(file = file_lists, .combine = rbind) %do%
   {
     print(file)
@@ -125,6 +125,31 @@ df_AIC_summary <-
   summarise(mean = mean(AIC), sd = sd(AIC), min = min(AIC), max = max(AIC), median = median(AIC))
 df_AIC_summary %>%
   export(here::here("results", "AIC_summary.csv"))
+
+# calculate AIC difference from the full model
+df_AIC_diff <- df_AIC %>%
+  group_by(PlayerID) %>%
+  mutate(AIC_diff = AIC - AIC[name == "full"]) %>%
+  ungroup() %>%
+  select(PlayerID, name, AIC_diff)
+
+df_AIC_diff_summary <-
+  df_AIC_diff %>%
+  group_by(name) %>%
+  summarise(mean = mean(AIC_diff), sd = sd(AIC_diff), min = min(AIC_diff), max = max(AIC_diff), median = median(AIC_diff))
+
+# calculate AIC difference from the true threshold model
+df_AIC_diff_true_threshold <- df_AIC %>%
+  group_by(PlayerID) %>%
+  mutate(AIC_diff = AIC - AIC[name == "fixed threshold"]) %>%
+  ungroup() %>%
+  select(PlayerID, name, AIC_diff)
+
+df_AIC_diff_true_threshold_summary <-
+  df_AIC_diff_true_threshold %>%
+  group_by(name) %>%
+  summarise(mean = mean(AIC_diff), sd = sd(AIC_diff), min = min(AIC_diff), max = max(AIC_diff), median = median(AIC_diff))
+
 
 # plot AIC (Supplementary Figure 5) ====
 (df_MLE_result %>%
@@ -196,6 +221,20 @@ df_AIC %>%
   ) %>%
   output_posthoc_result(
     "posthoc_test_AIC",
+    analysis_group = "model_comparison"
+  )
+
+# post-hoc test for AIC comparison to teh fixed threshold model
+df_AIC %>%
+  rstatix::wilcox_test(
+    AIC ~ name,
+    exact = TRUE,
+    paired = TRUE,
+    ref.group = "fixed threshold",
+    p.adjust.method = "fdr"
+  ) %>%
+  output_posthoc_result(
+    "posthoc_test_AIC_fixed_threshold",
     analysis_group = "model_comparison"
   )
 
@@ -543,7 +582,30 @@ p_param_corr %>%
     scale = 0.5
   )
 
-# correlation between weights and threshold ratio (Supplementary Figure 16)----
+p_param_corr_threshold_ratio <-
+  df_MLE_result_binary %>%
+  select(-log_likelihood, -name) %>%
+  pivot_wider(names_from = params, values_from = value) %>%
+  inner_join(df_rule_hit %>%
+    group_by(PlayerID) %>%
+    summarise(true_threshold = unique(true_threshold)), by = "PlayerID") %>%
+  mutate(threshold_ratio = threshold / true_threshold) %>%
+  select(-PlayerID, -number_of_params, -AIC, -true_threshold, -threshold) %>%
+  cor(method = corr_method) %>%
+  ggcorrplot(
+    lab = TRUE, type = "lower",
+    legend.title = corr_method,
+    ggtheme = ggplot2::theme_minimal() + theme(axis.title = element_text(), legend.key.height = unit(dev.size()[2] / 8, "inches"))
+  )
+
+p_param_corr_threshold_ratio %>%
+  save_svg_figure("p_param_corr_threshold_ratio",
+    width = fig_anova_width,
+    height = fig_anova_height, units = "mm",
+    scale = 0.5
+  )
+
+# correlation between weights and threshold ratio (Supplementary Figure 17)----
 df_MLE_result_binary %>%
   select(-log_likelihood, -name) %>%
   pivot_wider(names_from = params, values_from = value) %>%
