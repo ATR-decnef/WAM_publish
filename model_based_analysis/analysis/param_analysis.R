@@ -644,3 +644,53 @@ df_MLE_result_binary %>%
     scaling = fig_anova_scale,
     unit = "mm"
   )
+
+# calculate correlation between subjective threshold and confidence ----
+df_MLE_result_binary %>%
+  select(-log_likelihood, -name) %>%
+  pivot_wider(names_from = params, values_from = value) %>%
+  inner_join(
+    df_rule_hit %>%
+      group_by(PlayerID) %>%
+      summarise(
+        true_threshold = unique(true_threshold),
+        mean_EstRuleConfidence = mean(EstRuleConfidence)
+      ),
+    by = "PlayerID"
+  ) %>%
+  select(-PlayerID, -number_of_params) %>%
+  {
+    tmp <- .
+    cor_test <- cor.test(tmp$threshold, tmp$mean_EstRuleConfidence, method = "spearman", exact = FALSE)
+    print(cor_test)
+    tibble(
+      correlation = unname(cor_test$estimate),
+      p.value = cor_test$p.value,
+      conf.low = cor_test$conf.int[1],
+      conf.high = cor_test$conf.int[2]
+    )
+  }
+df_MLE_result_binary %>%
+  select(-log_likelihood, -name) %>%
+  pivot_wider(names_from = params, values_from = value) %>%
+  inner_join(
+    df_rule_hit %>%
+      group_by(PlayerID) %>%
+      summarise(
+        true_threshold = unique(true_threshold),
+        mean_EstRuleConfidence = mean(EstRuleConfidence)
+      ),
+    by = "PlayerID"
+  ) %>%
+  select(-PlayerID, -number_of_params) %>%
+  {
+    tmp <- .
+    cor_test <- cor.test(tmp$threshold, tmp$mean_EstRuleConfidence, method = "pearson", exact = FALSE)
+    print(cor_test)
+    tibble(
+      correlation = unname(cor_test$estimate),
+      p.value = cor_test$p.value,
+      conf.low = cor_test$conf.int[1],
+      conf.high = cor_test$conf.int[2]
+    )
+  }
